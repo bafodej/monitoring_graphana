@@ -1,0 +1,12 @@
+python-dotenv
+fastapi
+scikit-learn
+pandas
+numpy
+scipy
+joblib
+matplotlib
+seaborn
+evidently
+python-dotenv
+fastapi[standard]
