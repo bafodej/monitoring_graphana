@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routes.prediction_route import router as prediction_router 
+from .routes.prediction_route import router as prediction_router 
 
 app = FastAPI(
     title="IoT Air Quality Monitoring API",

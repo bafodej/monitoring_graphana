@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
-from shemas.prediction_shemas import AirQualityInput, PredictionOutput
-# Import des vos schémas
+from ..shemas.prediction_shemas import AirQualityInput, PredictionOutput
+# Import des  schémas
 # Import du service de prédiction (quand il existera)
 
 router = APIRouter(
@@ -15,7 +15,7 @@ async def predict(data: AirQualityInput):
     """
     from datetime import datetime
     
-    # TODO: Remplacer par une vraie prédiction quand le modèle sera prêt
+    # TODO:A Remplacer par une vraie prédiction quand le modèle sera prêt
     # Pour l'instant, simulation basée sur des seuils simples
     
     # Exemple de logique simple
