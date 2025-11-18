@@ -19,7 +19,7 @@ async def predict(data: AirQualityInput):
     # Pour l'instant, simulation basée sur des seuils simples
     
     # Exemple de logique simple
-    should_activate = data.co2 > 1000 or data.pm25 > 35 or data.co > 2.0
+    should_activate = data.co2 > 1000 or data.pm25 > 35 or data.temperature > 26.0
     
     prediction = 1 if should_activate else 0
     confidence = 0.85  # Valeur simulée
