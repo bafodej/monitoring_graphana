@@ -31,12 +31,9 @@ class PredictionOutput(BaseModel):
     """
     Schéma pour la réponse de prédiction
     """
-    action: str = Field(..., description="Action recommandée : 'Activer' ou 'Désactiver'")
-    prediction: int = Field(..., description="0 = Désactiver, 1 = Activer")
-    confidence: float = Field(..., description="Confiance de la prédiction (0-1)")
-    probability_activate: float = Field(..., description="Probabilité d'activation")
-    probability_deactivate: float = Field(..., description="Probabilité de désactivation")
-    timestamp: str = Field(..., description="Horodatage de la prédiction")
+
+    prediction: int = Field(..., description="1 = Désactiver, 0 = Activer")
+
     
     class Config:
         json_schema_extra = {
