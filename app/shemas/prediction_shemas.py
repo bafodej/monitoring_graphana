@@ -6,22 +6,20 @@ class AirQualityInput(BaseModel):
     """
     Schéma pour les données d'entrée des capteurs IoT
     """
-    temperature: float = Field(..., description="Température en °C", ge=-20, le=50)
-    humidity: float = Field(..., description="Humidité relative en %", ge=0, le=100)
     co2: float = Field(..., description="Concentration de CO2 en ppm", ge=0)
     tvoc: float = Field(..., description="Composés organiques volatils totaux en ppb", ge=0)
     pm25: float = Field(..., description="Particules fines PM2.5 en µg/m³", ge=0)
     pm10: float = Field(..., description="Particules PM10 en µg/m³", ge=0)
-    
+    co: float = Field(..., description="Particules de monoxyde de carbone  en ppm", ge=0)
+
     class Config:
         json_schema_extra = {
             "example": {
-                "temperature": 22.5,
-                "humidity": 45.0,
-                "co2": 450.0,
-                "tvoc": 150.0,
-                "pm25": 12.5,
-                "pm10": 20.0
+                "co2": 1200,
+                "tvoc": 200,
+                "pm25": 45.0,
+                "pm10": 80.0,
+                "co": 2.1,
             }
         }
 
@@ -39,11 +37,11 @@ class PredictionOutput(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "action": "Activer",
-                "prediction": 1,
-                "confidence": 0.85,
-                "probability_activate": 0.85,
-                "probability_deactivate": 0.15,
-                "timestamp": "2025-11-17T14:30:00"
+                "co2": 1200,
+                "tvoc": 200,
+                "pm25": 45.0,
+                "pm10": 80.0,
+                "co": 2.1,
             }
         }
+
