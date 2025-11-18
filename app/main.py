@@ -4,6 +4,12 @@ from .routes.prediction_route import router as prediction_router
 from .services.prediction_services import prediction_service
 import logging
 
+# =========================
+# Prometheus
+# =========================
+from prometheus_fastapi_instrumentator import Instrumentator
+from prometheus_client import Gauge
+
 # Configuration du logging
 logging.basicConfig(
     level=logging.INFO,
@@ -11,28 +17,40 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Lifespan event moderne - DOIT ÊTRE AVANT app = FastAPI()
+# =========================
+# Métrique custom
+# =========================
+ventilation_metric = Gauge(
+    "ventilation_required",
+    "Indique si la ventilation doit être activée (1=Good, 0=Moderate/Poor)"
+)
+
+# =========================
+# Lifespan event moderne
+# =========================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
     Charger le modèle au démarrage de l'API
     """
-    # Startup
-    logger.info(" Démarrage de l'API...")
+    logger.info("Démarrage de l'API...")
     
     if prediction_service.load_model():
-        logger.info(" Modèle chargé avec succès")
+        logger.info("Modèle chargé avec succès")
     else:
-        logger.warning(" API démarrée sans modèle (mode dégradé)")
+        logger.warning("API démarrée sans modèle (mode dégradé)")
     
-    logger.info(" API prête!")
+    # Instrumentator Prometheus
+    Instrumentator().instrument(app).expose(app)
+    logger.info("Prometheus metrics exposées sur /metrics")
     
     yield  
     
-    # Shutdown
-    logger.info(" Arrêt de l'API...")
+    logger.info("Arrêt de l'API...")
 
-# Création de  l'app 
+# =========================
+# Création de l'app
+# =========================
 app = FastAPI(
     title="IoT Air Quality Monitoring API",
     description="""
@@ -44,11 +62,17 @@ app = FastAPI(
     * Logging : Enregistrement des prédictions pour Evidently AI
     """,
     version="1.0.0",
-    lifespan=lifespan  # ← Passer le lifespan à l'app
+    lifespan=lifespan
 )
 
+# =========================
+# Routes
+# =========================
 app.include_router(prediction_router) 
 
+# =========================
+# Routes de base
+# =========================
 @app.get("/")
 async def root():
     return {
