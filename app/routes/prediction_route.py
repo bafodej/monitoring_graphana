@@ -1,13 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from ..shemas.prediction_shemas import AirQualityInput, PredictionOutput
 from ..services.prediction_services import prediction_service, AirQualityPredictionService
-from prometheus_client import Gauge
-
-# Création d'une métrique Prometheus custom
-ventilation_metric = Gauge(
-    "ventilation_required",
-    "Indique si la ventilation doit être activée (1=Good, 0=Moderate/Poor)"
-)
+from ..metrics import ventilation_metric
 
 router = APIRouter(
     prefix="/api",
@@ -19,10 +13,7 @@ async def predict(
     data: AirQualityInput,
     service: AirQualityPredictionService = Depends(lambda: prediction_service)
 ):
-    """
-    Endpoint to predict if ventilation is required.
-    Renvoie uniquement 1 (Good = pas besoin) ou 0 (Moderate/Poor = ventilation nécessaire)
-    """
+
     if not service.is_loaded():
         raise HTTPException(
             status_code=503,
@@ -31,13 +22,14 @@ async def predict(
 
     try:
         features = data.model_dump()
-        
-        # Prédiction binaire + label + confiance
-        binary_pred, label, confidence = service.predict(features)
-        
-        # Met à jour la métrique Prometheus
+
+        # On récupère seulement la prédiction binaire
+        binary_pred = service.predict(features)
+
+        # Met à jour Prometheus
         ventilation_metric.set(binary_pred)
-        
+
+        # Retourne à l'API
         return PredictionOutput(prediction=binary_pred)
 
     except Exception as e:
