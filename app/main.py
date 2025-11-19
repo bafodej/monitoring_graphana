@@ -15,7 +15,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
 # =========================
 # Lifespan (chargement modèle)
 # =========================
@@ -32,7 +31,6 @@ async def lifespan(app: FastAPI):
 
     logger.info("Arrêt de l'API...")
 
-
 # =========================
 # Création de l'app
 # =========================
@@ -42,14 +40,21 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Instrumentator doit être ajouté **ici**
-Instrumentator().instrument(app).expose(app)
+# =========================
+# Instrumentation Prometheus
+# =========================
+instrumentator = Instrumentator(
+    should_group_status_codes=False  # permet d'avoir http_request_duration_seconds par code HTTP
+)
+instrumentator.instrument(app).expose(app)
 logger.info("Prometheus metrics exposées sur /metrics")
 
 # Routes
 app.include_router(prediction_router)
 
-
+# =========================
+# Endpoints génériques
+# =========================
 @app.get("/")
 async def root():
     return {
@@ -58,7 +63,6 @@ async def root():
         "version": "1.0.0",
         "model_loaded": prediction_service.is_loaded()
     }
-
 
 @app.get("/health")
 async def health():
