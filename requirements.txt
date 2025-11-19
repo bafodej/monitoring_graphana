@@ -10,3 +10,4 @@ seaborn
 evidently
 python-dotenv
 fastapi[standard]
+evidently==0.7.11

@@ -1,69 +1,58 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from ..shemas.prediction_shemas import AirQualityInput, PredictionOutput
-# Import des  schémas
-# Import du service de prédiction (quand il existera)
+from ..services.prediction_services import prediction_service, AirQualityPredictionService
+from ..services.logging_service import prediction_logger  # ← Import du logger
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
-    prefix="/api",  # Tous les endpoints commenceront par /api
+    prefix="/api",
     tags=["Prediction"]
 )
 
 @router.post("/predict", response_model=PredictionOutput)
-async def predict(data: AirQualityInput):
+async def predict(
+    data: AirQualityInput,
+    service: AirQualityPredictionService = Depends(lambda: prediction_service)
+):
     """
-    Endpoint de prédiction (mode mock en attendant le modèle)
+    Endpoint to predict if ventilation is required.
+    Renvoie uniquement 1 (Good = pas besoin) ou 0 (Moderate/Poor = ventilation nécessaire)
     """
-    from datetime import datetime
-    
-    # TODO: A Remplacer par une vraie prédiction quand le modèle sera prêt
-    # Pour l'instant, simulation basée sur des seuils
-    
-    # Score de risque basé sur plusieurs facteurs
-    risk_score = 0
-    
-    # Vérifier CO2 (seuil: 1000 ppm)
-    if data.co2 > 1000:
-        risk_score += 3
-    elif data.co2 > 800:
-        risk_score += 1
-    
-    # Vérifier PM2.5 (seuil: 35 µg/m³)
-    if data.pm25 > 35:
-        risk_score += 3
-    elif data.pm25 > 25:
-        risk_score += 1
-    
-    # Vérifier PM10 (seuil: 50 µg/m³)
-    if data.pm10 > 50:
-        risk_score += 2
-    
-    # Vérifier TVOC (seuil: 500 ppb)
-    if data.tvoc > 500:
-        risk_score += 2
-    elif data.tvoc > 300:
-        risk_score += 1
-    
-    # Vérifier humidité (seuil: 60%)
-    if data.humidity > 70 or data.humidity < 30:
-        risk_score += 1
-    
-    # Vérifier température (seuil confort: 18-25°C)
-    if data.temperature > 28 or data.temperature < 18:
-        risk_score += 1
-    
-    # Facteur occupancy (plus de personnes = plus de pollution)
-    if data.occupancy > 5:
-        risk_score += 1
-    
-    # Décision basée sur le score de risque
-    should_activate = risk_score >= 4
-    
-    prediction = 0 if should_activate else 1
-    
-    # Calculer la confiance basée sur le score
-    confidence = min(0.95, 0.65 + (risk_score * 0.05))
-    
-    return PredictionOutput(
-        prediction=prediction,
-    )
+    if not service.is_loaded():
+        raise HTTPException(
+            status_code=503,
+            detail="Model is not loaded, API is in degraded mode."
+        )
+
+    try:
+        features = data.model_dump()
+        
+        # Prédiction binaire seulement
+        binary_pred = service.predict(features)
+        
+        # Créer la réponse
+        response = PredictionOutput(prediction=binary_pred)
+        
+        # Logger la prédiction (calculer action en interne pour le log)
+        action = "Désactiver" if binary_pred == 1 else "Activer"
+        prediction_logger.log_prediction(
+            input_data=features,
+            prediction_result={
+                'prediction': response.prediction,
+                'action': action  # Juste pour le CSV
+            }
+        )
+        
+        logger.info(f" Prédiction: {binary_pred}")
+        
+        return response
+
+    except Exception as e:
+        logger.error(f" Erreur: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred during prediction: {str(e)}"
+        )
 

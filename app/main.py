@@ -23,8 +23,11 @@ async def lifespan(app: FastAPI):
     if prediction_service.load_model():
         logger.info(" Modèle chargé avec succès")
     else:
-        logger.warning(" API démarrée sans modèle (mode dégradé)")
+        logger.warning(" API démarrée sans modèle")
     
+
+    from .services.logging_service import prediction_logger
+    prediction_logger.initialize_log_file()
     logger.info(" API prête!")
     
     yield  
