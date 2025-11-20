@@ -7,7 +7,6 @@ scipy
 joblib
 matplotlib
 seaborn
-evidently
 python-dotenv
 fastapi[standard]
 prometheus-fastapi-instrumentator
