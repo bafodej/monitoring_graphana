@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Dict, Any
 from datetime import datetime
 import logging
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -27,92 +28,46 @@ class PredictionLogger:
         ]
         
     def initialize_log_file(self):
-        """
-        Initialise le fichier CSV s'il n'existe pas
-        """
         try:
             if not self.log_path.exists():
                 self.log_path.parent.mkdir(parents=True, exist_ok=True)
                 df = pd.DataFrame(columns=self.columns)
                 df.to_csv(self.log_path, index=False)
                 logger.info(f"Fichier de log créé: {self.log_path}")
-            else:
-                logger.info(f" Fichier de log existant: {self.log_path}")
         except Exception as e:
             logger.error(f"Erreur initialisation log: {e}")
     
-    def log_prediction(
-        self, 
-        input_data: Dict[str, float], 
-        prediction_result: Dict[str, Any]
-    ): 
-        """
-        Enregistre une prédiction dans le CSV
-        
-        Args:
-            input_data: Données d'entrée (features des capteurs)
-            prediction_result: Résultat de la prédiction
-        """
+    def _clean_value(self, v):
+        """Supprime NaN, inf, None → remplace par 0"""
+        if v is None:
+            return 0
+        if isinstance(v, float) and (np.isnan(v) or np.isinf(v)):
+            return 0
+        return v
+    
+    def log_prediction(self, input_data: Dict[str, float], prediction_result: Dict[str, Any]):
         try:
-            # Préparer l'entrée avec timestamp
             log_entry = {
                 'timestamp': datetime.now().isoformat(),
-                'temperature': input_data['temperature'],
-                'humidity': input_data['humidity'],
-                'co2': input_data['co2'],
-                'pm25': input_data['pm25'],
-                'pm10': input_data['pm10'],
-                'tvoc': input_data['tvoc'],
-                'occupancy': input_data['occupancy'],
-                'prediction': prediction_result['prediction'],
+                'temperature': self._clean_value(input_data['temperature']),
+                'humidity': self._clean_value(input_data['humidity']),
+                'co2': self._clean_value(input_data['co2']),
+                'pm25': self._clean_value(input_data['pm25']),
+                'pm10': self._clean_value(input_data['pm10']),
+                'tvoc': self._clean_value(input_data['tvoc']),
+                'occupancy': self._clean_value(input_data['occupancy']),
+                'prediction': self._clean_value(prediction_result['prediction']),
                 'action': prediction_result['action']
             }
             
-            # Ajouter au CSV
             df = pd.DataFrame([log_entry])
             df.to_csv(self.log_path, mode='a', header=False, index=False)
             
-            logger.debug(f" Prédiction loggée: {prediction_result['action']}")
-            
         except Exception as e:
-            logger.error(f" Erreur lors du logging: {e}")
-    
-    def get_predictions_count(self) -> int:
-        """
-        Retourne le nombre total de prédictions enregistrées
-        """
-        if not self.log_path.exists():
-            return 0
-        try:
-            df = pd.read_csv(self.log_path)
-            return len(df)
-        except:
-            return 0
-    
-    def get_recent_predictions(self, n: int = 100) -> pd.DataFrame:
-        """
-        Retourne les n dernières prédictions
-        """
-        if not self.log_path.exists():
-            return pd.DataFrame()
-        try:
-            df = pd.read_csv(self.log_path)
-            return df.tail(n)
-        except Exception as e:
-            logger.error(f" Erreur lecture prédictions: {e}")
-            return pd.DataFrame()
-    
-    def get_all_predictions(self) -> pd.DataFrame:
-        """
-        Retourne toutes les prédictions
-        """
-        if not self.log_path.exists():
-            return pd.DataFrame()
-        try:
-            return pd.read_csv(self.log_path)
-        except Exception as e:
-            logger.error(f" Erreur lecture prédictions: {e}")
-            return pd.DataFrame()
+            logger.error(f"Erreur lors du logging: {e}")
 
-# Instance globale du logger
+# --------------------------------------------------------
+# 🟩 Instance globale accessible par les routes FastAPI
+# --------------------------------------------------------
 prediction_logger = PredictionLogger()
+prediction_logger.initialize_log_file()
