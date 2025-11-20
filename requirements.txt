@@ -11,3 +11,4 @@ evidently
 python-dotenv
 fastapi[standard]
 prometheus-fastapi-instrumentator
+evidently==0.7.11
