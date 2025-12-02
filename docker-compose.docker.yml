@@ -1,4 +1,4 @@
-sservices:
+services:
   # API FastAPI
   api:
     build:

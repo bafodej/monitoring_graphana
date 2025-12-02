@@ -211,3 +211,4 @@ evidently_workspace/
 test_ws/
 .vscode/
 notebooks/*.ipynb
+GEMINI.md

@@ -1,21 +1,30 @@
 global:
-  scrape_interval: 5s
-  evaluation_interval: 5s
+  scrape_interval: 15s # Par défaut, scraper toutes les 15 secondes.
+  evaluation_interval: 15s # Évaluer les règles toutes les 15 secondes.
 
 scrape_configs:
-
-  # --- API FastAPI ---
-  - job_name: "fastapi"
-    metrics_path: "/metrics"
+  # Scraper les métriques de Prometheus lui-même
+  - job_name: 'prometheus'
     static_configs:
-      - targets: ["host.docker.internal:8000"]   # API en local (hors docker)
+      - targets: ['localhost:9090']
 
-  # --- Prometheus itself ---
-  - job_name: "prometheus"
+  # Scraper les métriques de l'API FastAPI
+  # Le nom 'api' est résolu par le réseau interne de Docker
+  - job_name: 'fastapi-api'
     static_configs:
-      - targets: ["localhost:9090"]
+      - targets: ['api:8000']
+    # Ajout de labels pour mieux identifier les métriques
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'airquality-ml-api'
 
-  # --- Node Exporter (docker service) ---
-  - job_name: "node-exporter"
+  # Scraper les métriques des conteneurs via cAdvisor
+  # Le nom 'cadvisor' est résolu par le réseau interne de Docker
+  - job_name: 'cadvisor'
     static_configs:
-      - targets: ["node-exporter:9100"]
+      - targets: ['cadvisor:8080']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'cadvisor'

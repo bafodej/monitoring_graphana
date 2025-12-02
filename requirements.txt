@@ -1,5 +1,3 @@
-python-dotenv
-fastapi
 scikit-learn
 pandas
 numpy
@@ -11,3 +9,4 @@ python-dotenv
 fastapi[standard]
 prometheus-fastapi-instrumentator
 evidently==0.7.11
+loguru

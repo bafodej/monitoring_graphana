@@ -1,6 +1,6 @@
 import pandas as pd
-from evidently.legacy.report import Report
-from evidently.legacy.metrics import DataDriftTable
+from evidently.report import Report
+from evidently.metric_preset import DataDriftPreset
 from pathlib import Path
 
 # Charger les données
@@ -11,8 +11,8 @@ feature_columns = ['temperature', 'humidity', 'co2', 'pm25', 'pm10', 'tvoc', 'oc
 df_ref = reference_data[feature_columns]
 df_prod = production_data[feature_columns]
 
-# Créer et exécuter le rapport (legacy API)
-my_report = Report(metrics=[DataDriftTable()])
+# Créer et exécuter le rapport (API moderne)
+my_report = Report(metrics=[DataDriftPreset()])
 my_report.run(reference_data=df_ref, current_data=df_prod)
 
 # Sauvegarder en HTML

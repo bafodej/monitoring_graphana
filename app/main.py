@@ -1,11 +1,19 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
+from prometheus_fastapi_instrumentator import Instrumentator
+import logging
+import time
+
 from .routes.prediction_route import router as prediction_router
 from .routes.evidently_metrics_route import router as metrics_router
 from .services.prediction_services import prediction_service
-from .metrics import ventilation_metric
-from prometheus_fastapi_instrumentator import Instrumentator
-import logging
+from .services.logging_service import prediction_logger
+from .metrics import (
+    http_requests_total, http_requests_latency_seconds, api_errors_total,
+    ml_predictions_total, ml_prediction_latency_seconds,
+    ml_model_accuracy, ml_data_drift_score,
+    ml_prediction_confidence
+)
 
 # =========================
 # Logging global
@@ -17,7 +25,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # =========================
-# Lifespan (startup / shutdown)
+# FastAPI Lifespan
 # =========================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -31,7 +39,6 @@ async def lifespan(app: FastAPI):
 
     # Initialiser le fichier de logs Evidently
     try:
-        from .services.logging_service import prediction_logger
         prediction_logger.initialize_log_file()
         logger.info("Fichier de logs Evidently initialisé")
     except Exception as e:
@@ -39,12 +46,10 @@ async def lifespan(app: FastAPI):
 
     logger.info("API prête !")
     yield
-
-    # -------------------------------------
     logger.info("Arrêt de l'API...")
 
 # =========================
-# Application FastAPI
+# FastAPI App
 # =========================
 app = FastAPI(
     title="IoT Air Quality Monitoring API",
@@ -61,11 +66,9 @@ app = FastAPI(
 )
 
 # =========================
-# Prometheus instrumentation
+# Prometheus Instrumentator
 # =========================
-instrumentator = Instrumentator(
-    should_group_status_codes=False
-)
+instrumentator = Instrumentator(should_group_status_codes=False)
 instrumentator.instrument(app).expose(app)
 logger.info("Metrics Prometheus exposées sur /metrics")
 

@@ -31,19 +31,13 @@ class PredictionOutput(BaseModel):
     """
     Schéma pour la réponse de prédiction
     """
+    prediction: int = Field(..., description="Résultat de la prédiction binaire (1 = Désactiver, 0 = Activer)")
+    confidence: float = Field(..., description="Probabilité de confiance de la prédiction (entre 0.0 et 1.0)")
 
-    prediction: int = Field(..., description="1 = Désactiver, 0 = Activer")
-
-    
     class Config:
         json_schema_extra = {
             "example": {
-                "temperature": 25.3,
-                "humidity": 61.2,
-                "co2": 1200,
-                "pm25": 45.0,
-                "pm10": 80.0,
-                "tvoc": 200,
-                "occupancy": 10
+                "prediction": 0,
+                "confidence": 0.95
             }
         }
