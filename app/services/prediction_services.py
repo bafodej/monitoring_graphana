@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Dict, Tuple
 import logging
 import pandas as pd
-from .config import AppConfig
+from ..config import AppConfig
 
 logger = logging.getLogger(__name__)
 

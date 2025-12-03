@@ -4,7 +4,7 @@ from typing import Dict, Any
 from datetime import datetime
 import logging
 import numpy as np
-from .config import AppConfig
+from ..config import AppConfig
 
 logger = logging.getLogger(__name__)
 
@@ -25,9 +25,8 @@ class PredictionLogger:
             'tvoc',
             'occupancy',
             'prediction',
-            'action'
-            'prediction', # La prédiction binaire (0 ou 1)
-            'probability' # La confiance du modèle dans sa prédiction
+            'action',
+            'probability'
         ]
         
     def initialize_log_file(self):
@@ -59,9 +58,8 @@ class PredictionLogger:
                 'pm10': self._clean_value(input_data.get('pm10')),
                 'tvoc': self._clean_value(input_data.get('tvoc')),
                 'occupancy': self._clean_value(input_data.get('occupancy')),
-                'prediction': self._clean_value(prediction_result['prediction']),
-                'action': prediction_result['action']
                 'prediction': self._clean_value(prediction_result.get('prediction')),
+                'action': prediction_result.get('action'),
                 'probability': self._clean_value(prediction_result.get('probability'))
             }
             
