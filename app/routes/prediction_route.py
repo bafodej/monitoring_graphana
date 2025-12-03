@@ -1,9 +1,9 @@
 import time
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 from loguru import logger
 
 from ..shemas.prediction_shemas import AirQualityInput, PredictionOutput
-from ..services.prediction_services import prediction_service, AirQualityPredictionService
+from ..services.prediction_services import prediction_service
 from ..services.logging_service import prediction_logger
 from ..metrics import (
     record_prediction_metrics,
@@ -20,8 +20,7 @@ router = APIRouter(
 
 @router.post("/", response_model=PredictionOutput)
 async def make_prediction(
-    input_data: AirQualityInput,
-    service: AirQualityPredictionService = Depends(prediction_service)
+    input_data: AirQualityInput
 ):
     """
     Accepte les données des capteurs de qualité de l'air, effectue une prédiction
@@ -29,11 +28,11 @@ async def make_prediction(
 
     Enregistre également les métriques de prédiction et les données pour un monitoring ultérieur.
     """
-    if not service.is_loaded():
+    if not prediction_service.is_loaded():
         record_api_error("model_not_loaded")
         raise HTTPException(
             status_code=503,
-            detail="Le modèle de prédiction n'est pas chargé. Le service est indisponible."
+            detail="Le modèle de prédiction n'est pas chargé. API en mode dégradé."
         )
 
     try:
@@ -41,7 +40,7 @@ async def make_prediction(
         start_time = time.time()
 
         # Effectuer la prédiction pour obtenir la classe et la probabilité
-        binary_pred, probability = service.predict_with_proba(features)
+        binary_pred, probability = prediction_service.predict_with_proba(features)
 
         latency = time.time() - start_time
 
@@ -50,7 +49,7 @@ async def make_prediction(
 
         # Enregistrer les métriques de la prédiction ML
         record_prediction_metrics(
-            model_version=service.get_model_version(),
+            model_version=prediction_service.get_model_version(),
             prediction_class=prediction_class,
             confidence=float(probability),
             latency=latency

@@ -4,16 +4,17 @@ from typing import Dict, Any
 from datetime import datetime
 import logging
 import numpy as np
+from .config import AppConfig
 
 logger = logging.getLogger(__name__)
 
 class PredictionLogger:
     """
-    Service pour logger les prédictions dans un fichier CSV pour Evidently AI
+    Service pour logger les prédictions dans un fichier CSV pour Evidently.
     """
     
-    def __init__(self, log_path: str = "data/predictions_log.csv"):
-        self.log_path = Path(log_path)
+    def __init__(self, log_file_path: Path):
+        self._log_file = log_file_path
         self.columns = [
             'timestamp',
             'temperature',
@@ -25,15 +26,17 @@ class PredictionLogger:
             'occupancy',
             'prediction',
             'action'
+            'prediction', # La prédiction binaire (0 ou 1)
+            'probability' # La confiance du modèle dans sa prédiction
         ]
         
     def initialize_log_file(self):
         try:
-            if not self.log_path.exists():
-                self.log_path.parent.mkdir(parents=True, exist_ok=True)
+            self._log_file.parent.mkdir(parents=True, exist_ok=True)
+            if not self._log_file.exists():
                 df = pd.DataFrame(columns=self.columns)
-                df.to_csv(self.log_path, index=False)
-                logger.info(f"Fichier de log créé: {self.log_path}")
+                df.to_csv(self._log_file, index=False)
+                logger.info(f"Fichier de log créé: {self._log_file}")
         except Exception as e:
             logger.error(f"Erreur initialisation log: {e}")
     
@@ -49,19 +52,22 @@ class PredictionLogger:
         try:
             log_entry = {
                 'timestamp': datetime.now().isoformat(),
-                'temperature': self._clean_value(input_data['temperature']),
-                'humidity': self._clean_value(input_data['humidity']),
-                'co2': self._clean_value(input_data['co2']),
-                'pm25': self._clean_value(input_data['pm25']),
-                'pm10': self._clean_value(input_data['pm10']),
-                'tvoc': self._clean_value(input_data['tvoc']),
-                'occupancy': self._clean_value(input_data['occupancy']),
+                'temperature': self._clean_value(input_data.get('temperature')),
+                'humidity': self._clean_value(input_data.get('humidity')),
+                'co2': self._clean_value(input_data.get('co2')),
+                'pm25': self._clean_value(input_data.get('pm25')),
+                'pm10': self._clean_value(input_data.get('pm10')),
+                'tvoc': self._clean_value(input_data.get('tvoc')),
+                'occupancy': self._clean_value(input_data.get('occupancy')),
                 'prediction': self._clean_value(prediction_result['prediction']),
                 'action': prediction_result['action']
+                'prediction': self._clean_value(prediction_result.get('prediction')),
+                'probability': self._clean_value(prediction_result.get('probability'))
             }
             
             df = pd.DataFrame([log_entry])
-            df.to_csv(self.log_path, mode='a', header=False, index=False)
+            df = pd.DataFrame([log_entry], columns=self.columns)
+            df.to_csv(self._log_file, mode='a', header=False, index=False)
             
         except Exception as e:
             logger.error(f"Erreur lors du logging: {e}")
@@ -69,5 +75,4 @@ class PredictionLogger:
 # --------------------------------------------------------
 # 🟩 Instance globale accessible par les routes FastAPI
 # --------------------------------------------------------
-prediction_logger = PredictionLogger()
-prediction_logger.initialize_log_file()
+prediction_logger = PredictionLogger(log_file_path=AppConfig.PREDICTION_LOG_FILE)

@@ -73,7 +73,7 @@
       "pluginVersion": "12.2.1",
       "targets": [
         {
-          "expr": "ventilation_required",
+          "expr": "ventilation_status",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -166,7 +166,7 @@
       "pluginVersion": "12.2.1",
       "targets": [
         {
-          "expr": "ventilation_required",
+          "expr": "ventilation_status",
           "interval": "",
           "legendFormat": "Ventilation",
           "refId": "A"
@@ -223,7 +223,7 @@
       "pluginVersion": "12.2.1",
       "targets": [
         {
-          "expr": "ventilation_required",
+          "expr": "ventilation_status",
           "refId": "A"
         }
       ],
@@ -314,7 +314,11 @@
       "pluginVersion": "12.2.1",
       "targets": [
         {
-          "expr": "http_requests_total",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "cf4lbk4jxd3i8c"
+          },
+          "expr": "rate(http_requests_total{handler!~\"/metrics\"}[5m])",
           "legendFormat": "Requests",
           "refId": "A"
         }
@@ -329,6 +333,7 @@
       },
       "fieldConfig": {
         "defaults": {
+          "unit": "bytes",
           "color": {
             "mode": "palette-classic"
           },
@@ -406,12 +411,16 @@
       "pluginVersion": "12.2.1",
       "targets": [
         {
-          "expr": "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100",
-          "legendFormat": "Memory",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "cf4lbk4jxd3i8c"
+          },
+          "expr": "sum(container_memory_usage_bytes{name=\"airquality-ml-api\"}) by (name)",
+          "legendFormat": "{{name}}",
           "refId": "A"
         }
       ],
-      "title": "Node Memory Usage (%)",
+      "title": "API Container Memory Usage",
       "type": "timeseries"
     },
     {
@@ -421,6 +430,7 @@
       },
       "fieldConfig": {
         "defaults": {
+          "unit": "percent",
           "color": {
             "mode": "palette-classic"
           },
@@ -498,12 +508,16 @@
       "pluginVersion": "12.2.1",
       "targets": [
         {
-          "expr": "100 - (avg by(instance)(irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
-          "legendFormat": "CPU",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "cf4lbk4jxd3i8c"
+          },
+          "expr": "sum(rate(container_cpu_usage_seconds_total{name=\"airquality-ml-api\"}[5m])) by (name) * 100",
+          "legendFormat": "{{name}}",
           "refId": "A"
         }
       ],
-      "title": "Node CPU Usage (%)",
+      "title": "API Container CPU Usage (%)",
       "type": "timeseries"
     }
   ],

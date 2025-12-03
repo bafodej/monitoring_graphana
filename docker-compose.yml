@@ -1,4 +1,4 @@
-sservices:
+services:
   # API FastAPI
   api:
     build:
@@ -8,8 +8,8 @@ sservices:
     ports:
       - "8000:8000"
     volumes:
-      - ./reports:/app/reports
-      - ./app/data:/app/data
+      - ./reports:/code/reports
+      - ./app/data:/code/data
     environment:
       - ENVIRONMENT=production
     networks:
@@ -37,6 +37,10 @@ sservices:
       - ml-monitoring
     restart: unless-stopped
 
+    depends_on:
+      - api
+      - cadvisor
+
   # Grafana
   grafana:
     image: grafana/grafana:latest
@@ -63,8 +67,8 @@ sservices:
     ports:
       - "8080:8080"
     volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:ro
+      - /:/rootfs:ro # read-only
+      - /var/run:/var/run:rw # read-write est nécessaire pour le socket docker
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
     networks:

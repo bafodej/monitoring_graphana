@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict, Tuple
 import logging
 import pandas as pd
+from .config import AppConfig
 
 logger = logging.getLogger(__name__)
 
@@ -12,22 +13,26 @@ class AirQualityPredictionService:
     Service pour gérer les prédictions de qualité d'air.
     """
 
-    def __init__(self, model_path: str = "app/data/indoor_aqi_model.pkl", model_version: str = "1.0.0"):
-        self.model_path = Path(model_path)
+    def __init__(self):
+        self._model_path = AppConfig.MODEL_PATH
+        self._version_path = AppConfig.MODEL_VERSION_PATH
         self.model = None
-        self.model_version = model_version
-        self.feature_names = [
-            'temperature', 'humidity', 'co2', 'pm25', 'pm10', 'tvoc', 'occupancy'
-        ]
+        self.model_version = "unknown"
 
     def load_model(self) -> bool:
         try:
-            if not self.model_path.exists():
-                logger.warning(f"Modèle non trouvé: {self.model_path}")
+            if not self._model_path.exists():
+                logger.error(f"Fichier du modèle non trouvé à l'emplacement: {self._model_path}")
                 return False
 
-            self.model = joblib.load(self.model_path)
-            logger.info(f"Modèle chargé depuis {self.model_path} (version: {self.model_version})")
+            self.model = joblib.load(self._model_path)
+            logger.info(f"Modèle chargé depuis: {self._model_path}")
+
+            if self._version_path.exists():
+                self.model_version = self._version_path.read_text().strip()
+                logger.info(f"Version du modèle: {self.model_version}")
+            else:
+                logger.warning(f"Fichier de version non trouvé à l'emplacement: {self._version_path}")
             return True
 
         except Exception as e:
@@ -48,8 +53,9 @@ class AirQualityPredictionService:
         if self.model is None:
             raise ValueError("Modèle non chargé")
 
+        feature_names = self.model.feature_names_in_
         # Créer un DataFrame à partir des features
-        X = pd.DataFrame([features], columns=self.feature_names)
+        X = pd.DataFrame([features], columns=feature_names)
 
         # Prédiction des probabilités et de la classe
         probabilities = self.model.predict_proba(X)[0]
