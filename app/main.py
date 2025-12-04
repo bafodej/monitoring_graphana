@@ -6,6 +6,7 @@ import time
 
 from .routes.prediction_route import router as prediction_router
 from .routes.evidently_metrics_route import router as metrics_router
+from .routes.feedback_route import router as feedback_router
 from .services.prediction_services import prediction_service
 from .services.logging_service import prediction_logger
 from .metrics import (
@@ -77,6 +78,7 @@ logger.info("Metrics Prometheus exposées sur /metrics")
 # =========================
 app.include_router(prediction_router)
 app.include_router(metrics_router)
+app.include_router(feedback_router)
 
 # =========================
 # Endpoints génériques

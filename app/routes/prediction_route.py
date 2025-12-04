@@ -1,4 +1,5 @@
 import time
+import uuid
 from fastapi import APIRouter, HTTPException
 from loguru import logger
 
@@ -26,7 +27,7 @@ async def make_prediction(
     Accepte les données des capteurs de qualité de l'air, effectue une prédiction
     et retourne la nécessité d'activer la ventilation.
 
-    Enregistre également les métriques de prédiction et les données pour un monitoring ultérieur.
+    Chaque prédiction est enregistrée avec un ID unique.
     """
     if not prediction_service.is_loaded():
         record_api_error("model_not_loaded")
@@ -36,6 +37,7 @@ async def make_prediction(
         )
 
     try:
+        prediction_id = str(uuid.uuid4())
         features = input_data.dict()
         start_time = time.time()
 
@@ -66,14 +68,19 @@ async def make_prediction(
         # Logger la prédiction pour le rapport Evidently
         action = "Activer" if binary_pred == 0 else "Désactiver"
         prediction_logger.log_prediction(
+            prediction_id=prediction_id,
             input_data=features,
             prediction_result={'prediction': binary_pred, 'action': action, 'probability': float(probability)}
         )
 
-        logger.info(f"Prédiction: {action} (Confiance: {probability:.2f}, Latence: {latency:.4f}s)")
+        logger.info(f"Prédiction {prediction_id}: {action} (Confiance: {probability:.2f}, Latence: {latency:.4f}s)")
 
         # Retourner la réponse API
-        return PredictionOutput(prediction=binary_pred, confidence=float(probability))
+        return PredictionOutput(
+            prediction_id=prediction_id,
+            prediction=binary_pred,
+            confidence=float(probability)
+        )
 
     except Exception as e:
         logger.error(f"Erreur lors de la prédiction: {e}")

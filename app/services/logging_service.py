@@ -16,6 +16,7 @@ class PredictionLogger:
     def __init__(self, log_file_path: Path):
         self._log_file = log_file_path
         self.columns = [
+            'prediction_id',  # Ajout de l'identifiant unique
             'timestamp',
             'temperature',
             'humidity',
@@ -47,9 +48,10 @@ class PredictionLogger:
             return 0
         return v
     
-    def log_prediction(self, input_data: Dict[str, float], prediction_result: Dict[str, Any]):
+    def log_prediction(self, prediction_id: str, input_data: Dict[str, float], prediction_result: Dict[str, Any]):
         try:
             log_entry = {
+                'prediction_id': prediction_id,
                 'timestamp': datetime.now().isoformat(),
                 'temperature': self._clean_value(input_data.get('temperature')),
                 'humidity': self._clean_value(input_data.get('humidity')),
@@ -73,4 +75,4 @@ class PredictionLogger:
 # --------------------------------------------------------
 # 🟩 Instance globale accessible par les routes FastAPI
 # --------------------------------------------------------
-prediction_logger = PredictionLogger(log_file_path=AppConfig.PREDICTION_LOG_FILE)
+prediction_logger = PredictionLogger(log_file_path=AppConfig.PREDICTION_LOG_PATH)

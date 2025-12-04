@@ -31,13 +31,30 @@ class PredictionOutput(BaseModel):
     """
     Schéma pour la réponse de prédiction
     """
+    prediction_id: str = Field(..., description="Identifiant unique de la prédiction")
     prediction: int = Field(..., description="Résultat de la prédiction binaire (1 = Désactiver, 0 = Activer)")
     confidence: float = Field(..., description="Probabilité de confiance de la prédiction (entre 0.0 et 1.0)")
 
     class Config:
         json_schema_extra = {
             "example": {
+                "prediction_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
                 "prediction": 0,
                 "confidence": 0.95
+            }
+        }
+
+class FeedbackInput(BaseModel):
+    """
+    Schéma pour la soumission de la vérité terrain (ground truth).
+    """
+    prediction_id: str = Field(..., description="L'identifiant de la prédiction à laquelle ce feedback se rapporte.")
+    target: int = Field(..., description="La vraie valeur (vérité terrain). 0 pour 'Activer', 1 pour 'Désactiver'.")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "prediction_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+                "target": 0
             }
         }
