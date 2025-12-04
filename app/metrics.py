@@ -16,12 +16,6 @@ from typing import Dict, Optional
 # 🔥 1) MÉTRIQUES DE PERFORMANCE DE L'API (HTTP)
 # ============================================================
 
-http_requests_total = Counter(
-    "http_requests_total",
-    "Nombre total de requêtes HTTP reçues.",
-    ["method", "handler", "status_code"]
-)
-
 http_requests_latency_seconds = Histogram(
     "http_requests_latency_seconds",
     "Latence des requêtes HTTP en secondes.",

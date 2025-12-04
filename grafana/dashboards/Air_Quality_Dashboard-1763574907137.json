@@ -415,7 +415,7 @@
             "type": "prometheus",
             "uid": "cf4lbk4jxd3i8c"
           },
-          "expr": "sum(container_memory_usage_bytes{name=\"airquality-ml-api\"}) by (name)",
+          "expr": "sum(container_memory_usage_bytes{container_label_com_docker_compose_service=\"api\"}) by (name)",
           "legendFormat": "{{name}}",
           "refId": "A"
         }
@@ -512,7 +512,7 @@
             "type": "prometheus",
             "uid": "cf4lbk4jxd3i8c"
           },
-          "expr": "sum(rate(container_cpu_usage_seconds_total{name=\"airquality-ml-api\"}[5m])) by (name) * 100",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service=\"api\"}[5m])) by (name) * 100",
           "legendFormat": "{{name}}",
           "refId": "A"
         }

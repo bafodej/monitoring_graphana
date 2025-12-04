@@ -9,8 +9,8 @@ class AppConfig:
     Configuration centralisée de l'application.
     """
     # Configuration du modèle
-    MODEL_DIR = BASE_DIR / "app" / "model"
-    MODEL_PATH = MODEL_DIR / "model.joblib"
+    MODEL_DIR = BASE_DIR / "data"
+    MODEL_PATH = MODEL_DIR / "indoor_aqi_model.pkl"
     MODEL_VERSION_PATH = MODEL_DIR / "version.txt"
 
     # Configuration du logging pour Evidently
