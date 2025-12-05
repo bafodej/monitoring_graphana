@@ -16,6 +16,6 @@ my_report = Report(metrics=[DataDriftPreset()])
 my_report.run(reference_data=df_ref, current_data=df_prod)
 
 # Sauvegarder en HTML
-my_report.save_html("reports/data_drift_report.html")
+my_report.save("reports/data_drift_report.html")
 
 print(f"Rapport HTML généré : reports/data_drift_report.html")

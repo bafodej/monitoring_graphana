@@ -9,7 +9,7 @@ services:
       - "8000:8000"
     volumes:
       - ./reports:/code/reports
-      - ./app/data:/code/data
+      - ./app/data:/code/app/data
     environment:
       - ENVIRONMENT=production
     networks:

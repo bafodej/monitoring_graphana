@@ -10,7 +10,6 @@ from .routes.feedback_route import router as feedback_router
 from .services.prediction_services import prediction_service
 from .services.logging_service import prediction_logger
 from .metrics import (
-    http_requests_total, http_requests_latency_seconds, api_errors_total,
     ml_predictions_total, ml_prediction_latency_seconds,
     ml_model_accuracy, ml_data_drift_score,
     ml_prediction_confidence

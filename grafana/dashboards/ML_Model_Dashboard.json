@@ -456,7 +456,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{name='monitoring_graphana-api-1'}[5m])) * 100",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{name='airquality-ml-api'}[5m])) * 100",
           "legendFormat": "CPU Usage",
           "refId": "A"
         }
@@ -500,7 +500,7 @@
       },
       "targets": [
         {
-          "expr": "sum(container_memory_usage_bytes{name='monitoring_graphana-api-1'})",
+          "expr": "sum(container_memory_usage_bytes{name='airquality-ml-api'})",
           "legendFormat": "Memory Usage",
           "refId": "A"
         }
@@ -525,6 +525,6 @@
   "timezone": "browser",
   "title": "ML Model Monitoring",
   "uid": "ml_model_dashboard",
-  "version": 2,
+  "version": 3,
   "weekStart": ""
 }

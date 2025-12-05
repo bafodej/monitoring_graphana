@@ -200,20 +200,23 @@ def generate_classification_report(
     model_version: str = "v1.0",
     output_path: Optional[Path] = None
 ) -> Dict:
-    """Génère un rapport de performance de classification et met à jour les métriques."""
     try:
         logger.info("Génération du rapport de classification...")
         report = Report(metrics=[ClassificationPreset()])
-        report.run(reference_data=reference_data, current_data=current_data, column_mapping=None)
-        
+        report.run(reference_data=reference_data, current_data=current_data)
+
         if output_path:
             output_path.parent.mkdir(parents=True, exist_ok=True)
-            report.save_html(str(output_path))
+
+            html = report.as_html()
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write(html)
+
             logger.info(f"Rapport de classification sauvegardé : {output_path}")
             
         results = report.as_dict()
         
-        # Extraire les métriques et les mettre à jour
+        # Extraire les métriques
         class_metrics = results['metrics'][0]['result']['current']
         performance = {
             'accuracy': class_metrics.get('accuracy'),
@@ -233,7 +236,6 @@ def generate_drift_report(
     current_data: pd.DataFrame,
     output_path: Optional[Path] = None
 ) -> Dict:
-    """Génère un rapport de détection de dérive et met à jour les métriques."""
     try:
         logger.info("Génération du rapport de dérive...")
         report = Report(metrics=[DataDriftPreset()])
@@ -241,7 +243,11 @@ def generate_drift_report(
         
         if output_path:
             output_path.parent.mkdir(parents=True, exist_ok=True)
-            report.save_html(str(output_path))
+
+            html = report.as_html()
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write(html)
+
             logger.info(f"Rapport de dérive sauvegardé : {output_path}")
             
         results = report.as_dict()
