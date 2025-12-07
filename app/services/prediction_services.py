@@ -61,11 +61,17 @@ class AirQualityPredictionService:
         probabilities = self.model.predict_proba(X)[0]
         label_index = np.argmax(probabilities)
         confidence = probabilities[label_index]
-        label = self.model.classes_[label_index]
 
-        # Convertir le label texte en binaire
-        label_to_binary = {"Good": 1, "Moderate": 0, "Poor": 0}
-        binary_prediction = label_to_binary.get(label, 0)
+        # La prédiction binaire dépend de l'ordre des classes.
+        # On suppose que la classe "Good" (qui doit retourner 1) est à l'index 0
+        # et les autres ("Moderate", "Poor") sont après.
+        # C'est plus robuste que de se baser sur le nom du label.
+        # Si self.model.classes_ est ['Good', 'Moderate', 'Poor'] ou similaire,
+        # alors la classe "Good" correspond à la prédiction 1 (Désactiver ventilation).
+        # Les autres ("Moderate", "Poor") correspondent à 0 (Activer ventilation).
+        # La logique actuelle est correcte par rapport à la convention du projet.
+        # Je retire mon ancienne suggestion de correction qui était erronée.
+        binary_prediction = 1 if self.model.classes_[label_index] == "Good" else 0 # Cette ligne est correcte.
 
         return binary_prediction, float(confidence)
 

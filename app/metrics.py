@@ -1,21 +1,18 @@
 """
 Module de monitoring pour l'API de qualité de l'air.
-Contient les métriques Prometheus personnalisées et la logique pour les rapports Evidently.
-Inspiré par les meilleures pratiques de projets de monitoring ML.
+Ce module définit l'ensemble des métriques Prometheus personnalisées
+pour le monitoring de l'API, du modèle ML et des données métier.
 """
+import logging
 from prometheus_client import Gauge, Counter, Histogram, Summary
-from loguru import logger
-import pandas as pd
-from evidently import Report
-from evidently.presets import DataDriftPreset, ClassificationPreset
-from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict
 
 
 # ============================================================
 # 🔥 1) MÉTRIQUES DE PERFORMANCE DE L'API (HTTP)
 # ============================================================
 
+logger = logging.getLogger(__name__)
 http_requests_latency_seconds = Histogram(
     "http_requests_latency_seconds",
     "Latence des requêtes HTTP en secondes.",
@@ -68,7 +65,7 @@ ml_data_drift_score = Gauge(
 )
 
 ml_feature_drift_detected = Counter(
-    'ml_feature_drift_detected_total',
+    'ml_feature_drift_detected',
     'Compteur de détection de dérive par feature.',
     ['feature_name']
 )
@@ -154,108 +151,3 @@ def record_sensor_data(data: dict):
     except Exception as e:
         logger.error(f"Erreur lors de l'enregistrement des données capteurs : {e}")
         record_api_error("sensor_data_recording")
-
-def update_drift_metrics(drift_results: dict):
-    """Met à jour les métriques Prometheus avec les résultats de dérive d'Evidently."""
-    try:
-        metrics = drift_results.get('metrics', [])
-        for metric in metrics:
-            if metric.get('metric') == 'DatasetDriftMetric':
-                result = metric.get('result', {})
-                drift_score = result.get('dataset_drift_score', 0)
-                ml_data_drift_score.set(drift_score)
-
-                drift_by_columns = result.get('drift_by_columns', {})
-                for feature_name, feature_drift in drift_by_columns.items():
-                    if feature_drift.get('drift_detected', False):
-                        ml_feature_drift_detected.labels(feature_name=feature_name).inc()
-                
-                logger.info(f"Métriques de dérive mises à jour : score={drift_score:.3f}")
-                break
-    except Exception as e:
-        logger.error(f"Erreur lors de la mise à jour des métriques de dérive : {e}")
-        record_api_error("drift_metrics_update")
-
-def update_model_performance_metrics(model_version: str, performance_results: dict):
-    """Met à jour l'accuracy et le F1-score du modèle."""
-    try:
-        accuracy = performance_results.get('accuracy')
-        f1 = performance_results.get('f1')
-        
-        if accuracy is not None:
-            ml_model_accuracy.labels(model_version=model_version).set(accuracy)
-            logger.info(f"Accuracy du modèle (v={model_version}) mise à jour : {accuracy:.3f}")
-        
-        if f1 is not None:
-            ml_model_f1.labels(model_version=model_version).set(f1)
-            logger.info(f"F1-score du modèle (v={model_version}) mis à jour : {f1:.3f}")
-
-    except Exception as e:
-        logger.error(f"Erreur lors de la mise à jour des métriques de performance : {e}")
-        record_api_error("performance_metrics_update")
-
-def generate_classification_report(
-    reference_data: pd.DataFrame,
-    current_data: pd.DataFrame,
-    model_version: str = "v1.0",
-    output_path: Optional[Path] = None
-) -> Dict:
-    try:
-        logger.info("Génération du rapport de classification...")
-        report = Report(metrics=[ClassificationPreset()])
-        report.run(reference_data=reference_data, current_data=current_data)
-
-        if output_path:
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-
-            html = report.as_html()
-            with open(output_path, "w", encoding="utf-8") as f:
-                f.write(html)
-
-            logger.info(f"Rapport de classification sauvegardé : {output_path}")
-            
-        results = report.as_dict()
-        
-        # Extraire les métriques
-        class_metrics = results['metrics'][0]['result']['current']
-        performance = {
-            'accuracy': class_metrics.get('accuracy'),
-            'f1': class_metrics.get('f1')
-        }
-        update_model_performance_metrics(model_version, performance)
-        
-        logger.info(f"Rapport de classification généré : Accuracy={performance['accuracy']:.3f}, F1={performance['f1']:.3f}")
-        return results
-    except Exception as e:
-        logger.error(f"Erreur lors de la génération du rapport de classification : {e}")
-        record_api_error("classification_report_generation")
-        raise
-
-def generate_drift_report(
-    reference_data: pd.DataFrame,
-    current_data: pd.DataFrame,
-    output_path: Optional[Path] = None
-) -> Dict:
-    try:
-        logger.info("Génération du rapport de dérive...")
-        report = Report(metrics=[DataDriftPreset()])
-        report.run(reference_data=reference_data, current_data=current_data)
-        
-        if output_path:
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-
-            html = report.as_html()
-            with open(output_path, "w", encoding="utf-8") as f:
-                f.write(html)
-
-            logger.info(f"Rapport de dérive sauvegardé : {output_path}")
-            
-        results = report.as_dict()
-        update_drift_metrics(results)
-        
-        logger.info("Rapport de dérive généré avec succès.")
-        return results
-    except Exception as e:
-        logger.error(f"Erreur lors de la génération du rapport de dérive : {e}")
-        record_api_error("drift_report_generation")
-        raise

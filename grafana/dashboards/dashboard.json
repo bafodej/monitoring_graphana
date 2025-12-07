@@ -1,0 +1,179 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {"type": "grafana","uid": "-- Grafana --"},
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "title": "API Request Rate",
+      "type": "stat",
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0},
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{job=\"fastapi-api\"}[5m]))",
+          "legendFormat": "Total Requests",
+          "refId": "A",
+          "datasource": {"type": "prometheus","uid": "cf4lbk4jxd3i8c"}
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "reqps"}}
+    },
+    {
+      "id": 2,
+      "title": "API Latency (P95)",
+      "type": "stat",
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_requests_latency_seconds_bucket{job=\"fastapi-api\"}[5m])) by (le))",
+          "legendFormat": "P95 Latency",
+          "refId": "A",
+          "datasource": {"type": "prometheus","uid": "cf4lbk4jxd3i8c"}
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "s"}}
+    },
+    {
+      "id": 3,
+      "title": "API Error Rate (5xx)",
+      "type": "stat",
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0},
+      "targets": [
+        {
+          "expr": "(sum(rate(http_requests_total{job=\"fastapi-api\", status=~\"5..\"}[5m])) / sum(rate(http_requests_total{job=\"fastapi-api\"}[5m]))) * 100",
+          "legendFormat": "5xx Errors",
+          "refId": "A",
+          "datasource": {"type": "prometheus","uid": "cf4lbk4jxd3i8c"}
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "percent"}}
+    },
+    {
+      "id": 9,
+      "title": "Ventilation Status",
+      "type": "stat",
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 8},
+      "targets": [
+        {
+          "expr": "ventilation_status",
+          "legendFormat": "Ventilation",
+          "refId": "A",
+          "datasource": {"type": "prometheus","uid": "cf4lbk4jxd3i8c"}
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color":"red","value":0},
+              {"color":"green","value":1}
+            ]
+          },
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "ML Model Accuracy",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+      "targets": [
+        {
+          "expr": "ml_model_accuracy",
+          "legendFormat": "Accuracy",
+          "refId": "A",
+          "datasource": {"type": "prometheus","uid": "cf4lbk4jxd3i8c"}
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "percentunit","min":0,"max":1}}
+    },
+    {
+      "id": 5,
+      "title": "ML Data Drift Score",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+      "targets": [
+        {
+          "expr": "ml_data_drift_score",
+          "legendFormat": "Drift Score",
+          "refId": "A",
+          "datasource": {"type": "prometheus","uid": "cf4lbk4jxd3i8c"}
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "percentunit","min":0,"max":1}}
+    },
+    {
+      "id": 6,
+      "title": "Prediction Rate by Class",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 24},
+      "targets": [
+        {
+          "expr": "rate(ml_predictions_total[5m])",
+          "legendFormat": "{{prediction_class}}",
+          "refId": "A",
+          "datasource": {"type": "prometheus","uid": "cf4lbk4jxd3i8c"}
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "API Container CPU Usage",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32},
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{name='airquality-ml-api'}[5m])) * 100",
+          "legendFormat": "CPU Usage",
+          "refId": "A",
+          "datasource": {"type": "prometheus","uid": "cf4lbk4jxd3i8c"}
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "percent","max":100,"min":0}}
+    },
+    {
+      "id": 8,
+      "title": "API Container Memory Usage",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32},
+      "targets": [
+        {
+          "expr": "sum(container_memory_usage_bytes{name='airquality-ml-api'})",
+          "legendFormat": "Memory Usage",
+          "refId": "A",
+          "datasource": {"type": "prometheus","uid": "cf4lbk4jxd3i8c"}
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "bytes"}}
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["IoT","AirQuality","API","ML"],
+  "templating": {"list": []},
+  "time": {"from": "now-6h","to": "now"},
+  "timezone": "browser",
+  "title": "Air Quality & ML Unified Monitoring",
+  "uid": "airquality_ml_dashboard",
+  "version": 2,
+  "weekStart": ""
+}

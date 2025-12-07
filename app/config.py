@@ -1,16 +1,17 @@
-import os
 from pathlib import Path
-
-# Chemins de base
-BASE_DIR = Path(__file__).resolve().parent # Ceci pointe vers le dossier /app
+import os
 
 class AppConfig:
     """
     Configuration centralisée de l'application.
     Tous les chemins sont définis ici pour une gestion facile.
+    Compatible avec Docker.
     """
+    # Base directory dans le container
+    BASE_DIR = Path("/home/appuser/code")
+
     # --- Chemins du Modèle ---
-    MODEL_DIR = BASE_DIR / "data"
+    MODEL_DIR = BASE_DIR / "app" / "data"
     MODEL_PATH = MODEL_DIR / "indoor_aqi_model.pkl"
     MODEL_VERSION_PATH = MODEL_DIR / "version.txt"
     REFERENCE_DATA_PATH = MODEL_DIR / "reference_data.csv"

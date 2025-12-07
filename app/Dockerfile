@@ -1,24 +1,50 @@
-# Utiliser une image Python 3.10 officielle
-FROM python:3.10-slim
+# --- Étape 1 : Builder ---
+FROM python:3.10-slim AS builder
 
-# Définir le répertoire de travail
 WORKDIR /code
 
-# Copier le fichier des dépendances
+# Installer gcc et outils nécessaires pour compiler certaines dépendances
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc build-essential curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copier requirements et créer l'environnement virtuel
 COPY requirements.txt requirements.txt
+ENV VIRTUAL_ENV=/opt/venv
+RUN python3 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-# Installer les dépendances
-# --no-cache-dir pour ne pas stocker le cache et réduire la taille de l'image
-# --upgrade pip pour s'assurer d'avoir la dernière version
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
+# Installer les dépendances Python
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
-# Copier le code de l'application dans un sous-dossier 'app'
-COPY ./app /code/app
+# --- Étape 2 : Image finale ---
+FROM python:3.10-slim
 
-# Exposer le port sur lequel l'API s'exécutera
+# Installer curl pour healthchecks et utilitaires
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Créer un utilisateur non-root
+RUN useradd --create-home appuser
+WORKDIR /home/appuser/code
+
+# Copier l'environnement Python depuis le builder
+COPY --from=builder /opt/venv /opt/venv
+
+# Copier l'application et les scripts
+COPY --chown=appuser:appuser ./app /home/appuser/code/app
+COPY --chown=appuser:appuser ./prepare_reference_data.py \
+                             ./run_simulation.py \
+                             ./run_monitoring_analysis.py \
+                             /home/appuser/code/
+
+# Harmoniser PATH
+ENV PATH="/opt/venv/bin:$PATH"
+USER appuser
+
+# Exposer le port FastAPI
 EXPOSE 8000
 
-# Commande pour lancer l'application avec Uvicorn
-# --host 0.0.0.0 pour rendre l'API accessible de l'extérieur du conteneur
-# --port 8000 pour correspondre au port exposé. Le WORKDIR /code est dans le PYTHONPATH.
+# Commande par défaut : lancer l'API
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

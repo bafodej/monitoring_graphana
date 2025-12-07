@@ -1,106 +1,105 @@
-# Monitoring d'une API de Machine Learning pour la Qualité de l'Air (IoT)
+# Monitoring de Modèle de Machine Learning avec Prometheus, Grafana & Evidently AI
 
-Ce projet met en œuvre un système complet pour le monitoring d'une application de Machine Learning. L'API, basée sur des données de capteurs IoT, prédit si un système de ventilation doit être activé pour maintenir une bonne qualité de l'air intérieur.
+Ce projet est une démonstration complète d'une stack MLOps pour le monitoring d'un modèle de Machine Learning en production. Il intègre une API FastAPI, une base de données de séries temporelles (Prometheus), un outil de visualisation (Grafana) et une bibliothèque de validation de données et de modèles (Evidently AI).
 
-Le monitoring est assuré par une stack Prometheus, Grafana et Evidently AI, le tout orchestré avec Docker Compose.
+## 🎯 Objectif
 
-## 🏛️ Architecture
-
-Le système est composé de plusieurs services conteneurisés qui communiquent via un réseau Docker :
-
-1.  **API (FastAPI)** : Le cœur de l'application. Elle sert le modèle de classification, expose un endpoint `/predict` et publie des métriques de performance (API et modèle) pour Prometheus.
-2.  **Prometheus** : Un système de monitoring qui collecte (scrape) périodiquement les métriques exposées par l'API et cAdvisor.
-3.  **Grafana** : Une plateforme de visualisation qui se connecte à Prometheus pour afficher les métriques sous forme de graphiques et de tableaux de bord.
-4.  **cAdvisor** : Un agent qui collecte des métriques sur l'utilisation des ressources (CPU, RAM, réseau) de tous les conteneurs Docker.
-5.  **Evidently AI** : Intégré à l'API, Evidently est utilisé pour générer des rapports sur la dérive des données (*data drift*) et la performance du modèle de classification.
+L'objectif est de déployer un modèle de classification de la qualité de l'air et de monitorer :
+1.  **Les métriques système et API** : performance des conteneurs (CPU, RAM), latence des requêtes, taux d'erreur.
+2.  **Les métriques métier** : distribution des prédictions, nombre d'activations du système de ventilation.
+3.  **Les métriques de performance du modèle** : dérive des données (data drift), dérive du concept (concept drift), et précision du modèle au fil du temps.
 
 ## ✨ Fonctionnalités
 
--   **API de prédiction ML** : Endpoint pour prédire l'activation de la ventilation.
--   **Monitoring de performance API** : Suivi des requêtes HTTP, de la latence et des erreurs (via `prometheus-fastapi-instrumentator`).
--   **Monitoring du modèle ML** :
-    -   Suivi de la performance (précision, F1-score).
-    -   Détection de la dérive des données (*data drift*).
-    -   Les métriques clés sont exposées pour Prometheus.
--   **Rapports Visuels** : Génération de rapports HTML détaillés avec Evidently AI.
--   **Visualisation centralisée** : Un tableau de bord Grafana pré-configuré pour visualiser l'ensemble des métriques.
+-   **API FastAPI** : Sert un modèle `scikit-learn` pour prédire la nécessité d'activer un système de ventilation.
+-   **Prometheus & cAdvisor** : Collecte des métriques sur l'API et les conteneurs Docker.
+-   **Grafana** : Fournit des dashboards pré-configurés pour visualiser toutes les métriques en temps réel.
+-   **Evidently AI** : Génère des rapports HTML pour analyser la dérive des données et la performance du modèle.
+-   **Docker Compose** : Orchestre l'ensemble des services pour un déploiement simple et reproductible.
+-   **Simulation** : Inclut des scripts pour simuler du trafic et générer des données de production et de vérité terrain.
 
-## 🛠️ Technologies utilisées
+## 🏗️ Architecture
 
--   **Backend** : FastAPI
--   **Monitoring** : Prometheus, Grafana, Evidently AI
--   **Conteneurisation** : Docker, Docker Compose
--   **Librairies Python** : Pandas, Scikit-learn (implicite), Loguru, Uvicorn
+Le projet est composé des services Docker suivants :
 
-## 🚀 Démarrage rapide
+-   `api` (`airquality-ml-api`) : L'application FastAPI qui expose le modèle via un endpoint `/predict`. Elle expose également un endpoint `/metrics` pour Prometheus.
+-   `prometheus` : Configure pour scraper les métriques de `api` et `cadvisor`.
+-   `grafana` : Se connecte à Prometheus comme source de données et provisionne automatiquement deux dashboards.
+-   `cadvisor` : Expose les métriques de performance (CPU, RAM, réseau) de tous les conteneurs en cours d'exécution.
+-   `prepare_data_task` : Une tâche ponctuelle qui prépare un jeu de données de référence pour Evidently.
+-   `run_simulation_task` : Une tâche ponctuelle qui envoie des requêtes de prédiction à l'API et soumet des feedbacks (vérité terrain).
+-   `generate_report_task` : Une tâche ponctuelle qui s'exécute après la simulation pour générer les rapports de monitoring du modèle avec Evidently.
+
+## 🚀 Démarrage Rapide
 
 ### Prérequis
+*   Docker
+*   Docker Compose
 
--   [Docker](https://docs.docker.com/get-docker/)
--   [Docker Compose](https://docs.docker.com/compose/install/)
-
-### Installation et Lancement
+## Installation et Lancement
 
 1.  **Clonez le dépôt :**
     ```bash
-    git clone <URL_DU_DEPOT>
-    cd <NOM_DU_DOSSIER>
+    git clone <url-du-repo>
+    cd <nom-du-repo>
     ```
 
-2.  **Lancez les services avec Docker Compose :**
-    Cette commande va construire l'image de l'API et démarrer tous les conteneurs en arrière-plan.
+2.  **Lancez l'ensemble de la stack :**
+    Exécutez la commande suivante à la racine du projet.
     ```bash
-    docker-compose up -d --build
+    docker compose up -d --build
     ```
+    Cette commande va :
+    -   Construire l'image Docker pour l'application FastAPI.
+    -   Démarrer tous les services en arrière-plan (`-d`).
+    -   Exécuter les tâches de préparation des données, de simulation et de génération de rapport dans le bon ordre grâce aux `depends_on`.
 
-3.  **Vérifiez que les conteneurs sont bien en cours d'exécution :**
-    ```bash
-    docker-compose ps
-    ```
-    Vous devriez voir les services `api`, `prometheus`, `grafana` et `cadvisor` avec le statut `Up`.
+## 🌐 Accès aux Services
 
-## ⚙️ Comment utiliser le système
+Une fois les conteneurs démarrés, les services sont accessibles aux adresses suivantes :
 
-Une fois les services lancés, vous pouvez accéder aux différents composants :
+-   **API (Swagger UI)** : http://localhost:8000/docs
+-   **Prometheus** : http://localhost:9090
+-   **Grafana** : http://localhost:3000
+    -   **Login** : `admin`
+    -   **Mot de passe** : `admin`
+-   **cAdvisor** : http://localhost:8080
 
-### 1. API FastAPI
+## 📊 Monitoring et Rapports
 
--   **URL de la documentation (Swagger)** : [http://localhost:8000/docs](http://localhost:8000/docs)
--   **Endpoint de santé** : [http://localhost:8000/health](http://localhost:8000/health)
--   **Endpoint des métriques Prometheus** : [http://localhost:8000/metrics](http://localhost:8000/metrics)
+### Dashboards Grafana
 
-Vous pouvez utiliser la documentation interactive pour envoyer des requêtes de test à l'endpoint `/predict`.
+Connectez-vous à Grafana. Deux dashboards sont automatiquement provisionnés :
 
-### 2. Prometheus
+1.  **API & System Monitoring** : Affiche les métriques de performance de l'API (latence, taux de requêtes, erreurs) et l'utilisation des ressources des conteneurs (CPU, mémoire).
+2.  **ML Model Monitoring** : Affiche les métriques spécifiques au modèle de Machine Learning (score de dérive des données, distribution des prédictions, performance du modèle, etc.).
 
--   **URL** : [http://localhost:9090](http://localhost:9090)
--   Pour vérifier que Prometheus collecte bien les métriques de l'API, allez dans `Status > Targets`. Vous devriez voir les cibles `fastapi-api` et `cadvisor` avec un état `UP`.
+### Rapports Evidently AI
 
-### 3. Grafana
+Après l'exécution de la simulation, les rapports d'analyse sont disponibles dans le dossier `./reports/` à la racine du projet :
 
--   **URL** : [http://localhost:3000](http://localhost:3000)
--   **Identifiants** :
-    -   Utilisateur : `admin`
-    -   Mot de passe : `admin` (défini dans `docker-compose.yml`)
+-   `data_drift_report.html` : Analyse la dérive entre les données de référence et les données de production.
+-   `classification_report.html` : Analyse la performance du modèle de classification (précision, F1-score, matrice de confusion) en se basant sur la vérité terrain soumise.
 
-Le tableau de bord "Air Quality Dashboard" devrait être automatiquement provisionné. Si ce n'est pas le cas, vous pouvez l'importer manuellement en utilisant le fichier JSON situé dans le dossier `grafana/`.
+Ouvrez ces fichiers dans votre navigateur pour explorer les analyses.
 
-### 4. Rapports Evidently
+## 🧹 Arrêter les services
 
-Les rapports HTML sont générés et stockés dans le dossier `/reports` à la racine du projet. Vous pouvez les ouvrir directement avec votre navigateur pour analyser en détail la dérive des données ou la performance du modèle.
+Pour arrêter tous les conteneurs, exécutez :
 
-## 📂 Structure du projet
-
+```bash
+docker compose down
 ```
-.
-├── app/                  # Code source de l'application FastAPI
-│   ├── routes/           # Fichiers de routes (endpoints)
-│   ├── services/         # Logique métier (modèle, evidently)
-│   ├── Dockerfile        # Instructions pour construire l'image de l'API
-│   └── main.py           # Point d'entrée de l'application FastAPI
-├── docker-compose.yml    # Fichier d'orchestration des services
-├── grafana/              # Configuration et tableau de bord Grafana
-├── prometheus/           # Fichier de configuration de Prometheus
-├── reports/              # Rapports HTML générés par Evidently
-└── README.md             # Cette documentation
+
+Pour nettoyer également les volumes (attention, cela supprime les données de Prometheus et Grafana) :
+
+```bash
+docker compose down -v
 ```
+
+## 🔮 Pistes d'amélioration
+
+-   **Alerting** : Mettre en place Alertmanager pour envoyer des notifications (ex: sur Slack) lorsque le data drift dépasse un certain seuil.
+-   **Pipeline de CI/CD** : Automatiser les tests et le déploiement avec des outils comme GitHub Actions.
+-   **Registre de modèles** : Utiliser un outil comme MLflow pour versionner et gérer les modèles de manière plus structurée.
+-   **Retraining** : Déclencher un pipeline de ré-entraînement automatique lorsque les performances du modèle se dégradent.

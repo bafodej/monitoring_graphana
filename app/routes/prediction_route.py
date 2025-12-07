@@ -5,7 +5,6 @@ from loguru import logger
 
 from ..shemas.prediction_shemas import AirQualityInput, PredictionOutput
 from ..services.prediction_services import prediction_service
-from ..services.logging_service import prediction_logger
 from ..metrics import (
     record_prediction_metrics,
     record_sensor_data,
@@ -20,9 +19,7 @@ router = APIRouter(
 )
 
 @router.post("/", response_model=PredictionOutput)
-async def make_prediction(
-    input_data: AirQualityInput
-):
+async def make_prediction(input_data: AirQualityInput):
     """
     Accepte les données des capteurs de qualité de l'air, effectue une prédiction
     et retourne la nécessité d'activer la ventilation.
@@ -65,14 +62,8 @@ async def make_prediction(
         if binary_pred == 0:  # 0 signifie que la ventilation est nécessaire
             ventilation_activations_total.inc()
 
-        # Logger la prédiction pour le rapport Evidently
+        # Logger la prédiction
         action = "Activer" if binary_pred == 0 else "Désactiver"
-        prediction_logger.log_prediction(
-            prediction_id=prediction_id,
-            input_data=features,
-            prediction_result={'prediction': binary_pred, 'action': action, 'probability': float(probability)}
-        )
-
         logger.info(f"Prédiction {prediction_id}: {action} (Confiance: {probability:.2f}, Latence: {latency:.4f}s)")
 
         # Retourner la réponse API

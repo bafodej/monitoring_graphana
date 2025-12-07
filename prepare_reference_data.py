@@ -1,69 +1,62 @@
 import pandas as pd
-from pathlib import Path
 import logging
+import argparse
+from app.config import AppConfig
 
-# Configuration du logging
+# Logging
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s - %(message)s')
 
-# Définition des chemins
-BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "app" / "data"
-FULL_DATASET_PATH = DATA_DIR / "IoT_Indoor_Air_Quality_Dataset.csv"
-REFERENCE_DATA_PATH = DATA_DIR / "reference_data.csv"
-
-# Nombre d'échantillons à prendre pour le jeu de données de référence
+FULL_DATASET_PATH = AppConfig.MODEL_DIR / "IoT_Indoor_Air_Quality_Dataset.csv"
+REFERENCE_DATA_PATH = AppConfig.REFERENCE_DATA_PATH
 SAMPLE_SIZE = 500
 
-def create_reference_data():
-    """
-    Crée le fichier reference_data.csv en prenant un échantillon
-    du jeu de données complet et en renommant les colonnes.
-    """
+def create_reference_data(force: bool = False):
     logging.info("--- Création du jeu de données de référence pour Evidently ---")
 
-    # Vérifier si le fichier source existe
-    if not FULL_DATASET_PATH.exists():
-        logging.error(f"Le fichier source '{FULL_DATASET_PATH}' est introuvable. Impossible de créer le fichier de référence.")
+    # S'assurer que le dossier existe
+    AppConfig.MODEL_DIR.mkdir(parents=True, exist_ok=True)
+
+    if REFERENCE_DATA_PATH.exists() and not force:
+        logging.warning(f"Le fichier '{REFERENCE_DATA_PATH}' existe déjà. Utilisez --force pour le recréer.")
         return
 
-    # Vérifier si le fichier de référence existe déjà
-    if REFERENCE_DATA_PATH.exists():
-        logging.warning(f"Le fichier de référence '{REFERENCE_DATA_PATH}' existe déjà. Pour le recréer, supprimez-le manuellement et relancez le script.")
+    if not FULL_DATASET_PATH.exists():
+        logging.error(f"Fichier source '{FULL_DATASET_PATH}' introuvable !")
         return
 
     try:
-        # Charger le jeu de données complet
-        logging.info(f"Chargement du jeu de données complet depuis '{FULL_DATASET_PATH}'...")
         df = pd.read_csv(FULL_DATASET_PATH)
-        
-        # --- NOUVELLE ÉTAPE : RENOMMAGE DES COLONNES ---
         logging.info("Renommage des colonnes pour correspondre au modèle...")
+
         column_mapping = {
-            "Temperature (?C)": "temperature",
-            "Humidity (%)": "humidity",
-            "CO2 (ppm)": "co2",
-            "PM2.5 (?g/m?)": "pm25",
-            "PM10 (?g/m?)": "pm10",
-            "TVOC (ppb)": "tvoc",
-            "Occupancy Count": "occupancy"
+            "Temperature[C]": "temperature",
+            "Humidity[%]": "humidity",
+            "TVOC[ppb]": "tvoc",
+            "eCO2[ppm]": "co2",
+            "Raw H2": "raw_h2",
+            "Raw Ethanol": "raw_ethanol",
+            "Pressure[hPa]": "pressure",
+            "PM1.0": "pm10",
+            "PM2.5": "pm25",
+            "NC0.5": "nc05",
+            "NC1.0": "nc10",
+            "NC2.5": "nc25",
+            "CNT": "cnt",
+            "Fire Alarm": "fire_alarm",
+            "Room_Occupancy_Count": "occupancy"
         }
         df = df.rename(columns=column_mapping)
-        # ------------------------------------------------
+        df['target'] = df['occupancy'].apply(lambda x: 0 if x > 0 else 1)
 
-        # Prendre un échantillon aléatoire
-        logging.info(f"Prélèvement d'un échantillon aléatoire de {SAMPLE_SIZE} lignes...")
-        if len(df) < SAMPLE_SIZE:
-            logging.warning(f"Le jeu de données complet est plus petit que la taille de l'échantillon ({len(df)} < {SAMPLE_SIZE}). Utilisation de toutes les données.")
-            reference_df = df
-        else:
-            reference_df = df.sample(n=SAMPLE_SIZE, random_state=42)
-
-        # Sauvegarder l'échantillon
+        n_sample = min(SAMPLE_SIZE, len(df))
+        reference_df = df.sample(n=n_sample, random_state=42)
         reference_df.to_csv(REFERENCE_DATA_PATH, index=False)
-        logging.info(f"Succès ! Fichier de référence créé avec les bonnes colonnes : '{REFERENCE_DATA_PATH}'")
-
+        logging.info(f"Fichier de référence créé : '{REFERENCE_DATA_PATH}' ({n_sample} lignes)")
     except Exception as e:
-        logging.error(f"Une erreur est survenue lors de la création du fichier de référence: {e}")
+        logging.error(f"Erreur lors de la création du fichier de référence : {e}")
 
 if __name__ == "__main__":
-    create_reference_data()
+    parser = argparse.ArgumentParser(description="Prépare le jeu de données de référence.")
+    parser.add_argument("--force", action="store_true", help="Récrée le fichier même s'il existe.")
+    args = parser.parse_args()
+    create_reference_data(force=args.force)
