@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Dict, Tuple
 import logging
 import pandas as pd
-from ..config import AppConfig
+from ..config import get_settings  # <- utiliser get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -14,8 +14,9 @@ class AirQualityPredictionService:
     """
 
     def __init__(self):
-        self._model_path = AppConfig.MODEL_PATH
-        self._version_path = AppConfig.MODEL_VERSION_PATH
+        settings = get_settings()  # <- récupérer l'instance de config
+        self._model_path = settings.MODEL_PATH
+        self._version_path = settings.MODEL_VERSION_PATH
         self.model = None
         self.model_version = "unknown"
 
@@ -40,41 +41,24 @@ class AirQualityPredictionService:
             return False
 
     def predict(self, features: Dict[str, float]) -> int:
-        """
-        Fait une prédiction binaire simple (1 = Good, 0 = Moderate/Poor).
-        """
         binary_pred, _ = self.predict_with_proba(features)
         return binary_pred
 
     def predict_with_proba(self, features: Dict[str, float]) -> Tuple[int, float]:
-        """
-        Fait une prédiction et retourne la classe binaire ainsi que la probabilité de confiance.
-        """
         if self.model is None:
             raise ValueError("Modèle non chargé")
 
         feature_names = self.model.feature_names_in_
-        # Créer un DataFrame à partir des features
         X = pd.DataFrame([features], columns=feature_names)
 
-        # Prédiction des probabilités et de la classe
         probabilities = self.model.predict_proba(X)[0]
         label_index = np.argmax(probabilities)
         confidence = probabilities[label_index]
 
-        # La prédiction binaire dépend de l'ordre des classes.
-        # On suppose que la classe "Good" (qui doit retourner 1) est à l'index 0
-        # et les autres ("Moderate", "Poor") sont après.
-        # C'est plus robuste que de se baser sur le nom du label.
-        # Si self.model.classes_ est ['Good', 'Moderate', 'Poor'] ou similaire,
-        # alors la classe "Good" correspond à la prédiction 1 (Désactiver ventilation).
-        # Les autres ("Moderate", "Poor") correspondent à 0 (Activer ventilation).
-        # La logique actuelle est correcte par rapport à la convention du projet.
-        # Je retire mon ancienne suggestion de correction qui était erronée.
-        binary_prediction = 1 if self.model.classes_[label_index] == "Good" else 0 # Cette ligne est correcte.
+        # Classe "Good" = 1, autres = 0
+        binary_prediction = 1 if self.model.classes_[label_index] == "Good" else 0
 
         return binary_prediction, float(confidence)
-
 
     def is_loaded(self) -> bool:
         return self.model is not None

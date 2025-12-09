@@ -4,19 +4,22 @@ from loguru import logger
 from datetime import datetime
 
 from ..schemas.prediction_schemas import FeedbackInput
-from ..config import AppConfig
+from ..config import get_settings
 
 router = APIRouter(prefix="/feedback", tags=["Feedback"])
+
+# Récupération de l'instance de configuration
+settings = get_settings()
 
 def ensure_ground_truth_file_exists():
     """Crée le fichier de vérité terrain s'il n'existe pas."""
     try:
-        AppConfig.GROUND_TRUTH_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-        if not AppConfig.GROUND_TRUTH_LOG_PATH.exists():
+        settings.GROUND_TRUTH_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        if not settings.GROUND_TRUTH_LOG_PATH.exists():
             pd.DataFrame(columns=["prediction_id", "target", "timestamp"]).to_csv(
-                AppConfig.GROUND_TRUTH_LOG_PATH, index=False
+                settings.GROUND_TRUTH_LOG_PATH, index=False
             )
-            logger.info(f"Fichier de log de vérité terrain créé : {AppConfig.GROUND_TRUTH_LOG_PATH}")
+            logger.info(f"Fichier de log de vérité terrain créé : {settings.GROUND_TRUTH_LOG_PATH}")
     except Exception as e:
         logger.error(f"Impossible d'initialiser le fichier de vérité terrain : {e}")
 
@@ -40,7 +43,7 @@ async def submit_feedback(feedback_data: FeedbackInput):
 
         # Écriture sécurisée dans le CSV
         pd.DataFrame([log_entry]).to_csv(
-            AppConfig.GROUND_TRUTH_LOG_PATH, mode='a', header=False, index=False
+            settings.GROUND_TRUTH_LOG_PATH, mode='a', header=False, index=False
         )
 
         logger.info(f"Feedback enregistré pour prediction_id={feedback_data.prediction_id}")
