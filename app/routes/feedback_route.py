@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException
 from loguru import logger
 from datetime import datetime
 
-from ..shemas.prediction_shemas import FeedbackInput
+from ..schemas.prediction_schemas import FeedbackInput
 from ..config import AppConfig
 
 router = APIRouter(prefix="/feedback", tags=["Feedback"])

@@ -10,3 +10,4 @@ fastapi[standard]
 prometheus-fastapi-instrumentator
 evidently==0.7.11
 loguru
+pydantic-settings

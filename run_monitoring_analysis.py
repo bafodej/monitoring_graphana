@@ -1,34 +1,37 @@
-import logging
-import os
+from pathlib import Path
+from loguru import logger
 from app.services.evidently_service import evidently_service
-from app.config import AppConfig
+from app.config import get_settings
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 
-def main():
-    logging.info(">>> Lancement du monitoring Evidently...")
+def main() -> None:
+    """
+    Exécute le monitoring Evidently :
+    - Vérifie la présence des fichiers de référence
+    - Génère les rapports de dérive et de performance
+    - Met à jour les métriques Prometheus
+    """
+    settings = get_settings()
+    reference_path: Path = settings.REFERENCE_DATA_PATH
+    reports_dir: Path = settings.REPORTS_DIR
 
-    reference_path = AppConfig.REFERENCE_DATA_PATH
-    reports_dir = AppConfig.REPORTS_DIR
+    logger.info(">>> Lancement du monitoring Evidently...")
 
-    # Vérifier que le fichier de référence existe
     if not reference_path.exists():
-        logging.error(f"Fichier de référence introuvable : {reference_path}")
+        logger.error(f"Fichier de référence introuvable : {reference_path}")
         return
 
-    # Vérifier que le dossier de rapports existe
+    # S'assurer que le dossier de rapports existe
     reports_dir.mkdir(parents=True, exist_ok=True)
 
     try:
         result = evidently_service.update_all_reports()
-        logging.info(f">>> Rapport généré : {result}")
+        logger.success(f">>> Rapport Evidently généré : {result}")
     except FileNotFoundError as fe:
-        logging.error(f"Fichier introuvable : {fe}")
+        logger.error(f"Fichier introuvable : {fe}")
     except Exception as e:
-        logging.error(f"Erreur lors de la génération du rapport : {e}")
+        logger.exception(f"Erreur lors de la génération des rapports Evidently : {e}")
+
 
 if __name__ == "__main__":
     main()
