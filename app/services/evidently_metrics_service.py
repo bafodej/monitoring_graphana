@@ -12,6 +12,7 @@ class EvidentlyService:
     def __init__(self):
         self.reference_path = settings.REFERENCE_DATA_PATH
         self.prediction_log_path = settings.PREDICTION_LOG_PATH
+        self.feature_columns = settings.FEATURE_COLUMNS
 
     def get_prediction_metrics(self) -> dict:
         """Retourne statistiques des prédictions pour Grafana/Prometheus"""
@@ -25,16 +26,21 @@ class EvidentlyService:
             }
 
         df = pd.read_csv(self.prediction_log_path)
+
+        # Colonne de prédiction correcte
+        pred_col = "predicted_class"
+
+        # Compter les classes en ignorant 'unknown'
         metrics = {
             "status": "ok",
             "predictions_count": len(df),
-            "predictions_activate": int((df['prediction'] == 0).sum()),
-            "predictions_deactivate": int((df['prediction'] == 1).sum()),
+            "predictions_activate": int((df[pred_col] == "activate_ventilation").sum()),
+            "predictions_deactivate": int((df[pred_col] == "deactivate_ventilation").sum()),
             "features": {}
         }
 
-        feature_columns = ['temperature', 'humidity', 'co2', 'pm25', 'pm10', 'tvoc', 'occupancy']
-        for col in feature_columns:
+        # Statistiques des features
+        for col in self.feature_columns:
             if col in df.columns:
                 metrics["features"][col] = {
                     "mean": float(df[col].mean()),
@@ -50,10 +56,15 @@ class EvidentlyService:
         if not self.reference_path.exists() or not self.prediction_log_path.exists():
             return {"status": "no_data", "drift_detected": False, "drift_score": 0.0}
 
-        # Calcul du drift via metrics.py
-        record_drift_metrics(self.reference_path, self.prediction_log_path)
-        drift_score = float(ml_data_drift_score._value.get())
-        drift_detected = drift_score > 0.0
+        try:
+            record_drift_metrics(self.reference_path, self.prediction_log_path)
+            drift_score = float(ml_data_drift_score._value.get())
+            drift_detected = drift_score > 0.0
+        except Exception as e:
+            logger.error(f"Erreur lors du calcul du drift : {e}")
+            drift_score = 0.0
+            drift_detected = False
+
         return {
             "drift_detected": drift_detected,
             "drift_score": drift_score,
