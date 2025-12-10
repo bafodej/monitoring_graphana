@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # -----------------------------
   # 1) API FastAPI
@@ -13,8 +11,8 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./reports:/home/appuser/code/reports
-      - ./app/data:/home/appuser/code/data
+      - ./reports:/home/appuser/code/reports:rw
+      - ./app/data:/home/appuser/code/app/data:rw
     environment:
       ENVIRONMENT: production
     networks:
@@ -53,9 +51,9 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - grafana_data:/var/lib/grafana
-      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
-      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+      - grafana_data:/var/lib/grafana:rw
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources:ro
     environment:
       GF_SECURITY_ADMIN_PASSWORD: admin
       GF_USERS_ALLOW_SIGN_UP: "false"
@@ -83,14 +81,14 @@ services:
     restart: unless-stopped
 
   # -----------------------------
-  # 5) Tâche : Préparer les données de référence
+  # 5) Préparer les données de référence
   # -----------------------------
   prepare_data:
     image: monitoring_grafana-api:latest
     container_name: prepare_data_task
     command: python /home/appuser/code/prepare_reference_data.py --force
     volumes:
-      - ./app/data:/home/appuser/code/data
+      - ./app/data:/home/appuser/code/app/data:rw
     networks:
       - ml-monitoring
     depends_on:
@@ -99,7 +97,7 @@ services:
     restart: "no"
 
   # -----------------------------
-  # 6) Tâche : Simulation
+  # 6) Simulation
   # -----------------------------
   run_simulation:
     image: monitoring_grafana-api:latest
@@ -108,7 +106,8 @@ services:
     environment:
       API_BASE_URL: http://api:8000
     volumes:
-      - ./app/data:/home/appuser/code/data
+      - ./app/data:/home/appuser/code/app/data:rw
+      - ./reports:/home/appuser/code/reports:rw
     networks:
       - ml-monitoring
     depends_on:
@@ -117,15 +116,15 @@ services:
     restart: "no"
 
   # -----------------------------
-  # 7) Tâche : Générer le rapport Evidently
+  # 7) Générer le rapport Evidently
   # -----------------------------
   generate_report:
     image: monitoring_grafana-api:latest
     container_name: generate_report_task
     command: python /home/appuser/code/run_monitoring_analysis.py
     volumes:
-      - ./reports:/home/appuser/code/reports
-      - ./app/data:/home/appuser/code/data
+      - ./reports:/home/appuser/code/reports:rw
+      - ./app/data:/home/appuser/code/app/data:rw
     networks:
       - ml-monitoring
     depends_on:

@@ -37,30 +37,32 @@ def create_reference_data(force: bool = False) -> None:
         df = pd.read_csv(full_dataset_path)
         logger.info("Renommage des colonnes pour correspondre au modèle...")
 
+        # Mapping corrigé selon ton CSV
         column_mapping = {
-            "Temperature[C]": "temperature",
-            "Humidity[%]": "humidity",
-            "TVOC[ppb]": "tvoc",
-            "eCO2[ppm]": "co2",
-            "Raw H2": "raw_h2",
-            "Raw Ethanol": "raw_ethanol",
-            "Pressure[hPa]": "pressure",
-            "PM1.0": "pm10",
-            "PM2.5": "pm25",
-            "NC0.5": "nc05",
-            "NC1.0": "nc10",
-            "NC2.5": "nc25",
-            "CNT": "cnt",
-            "Fire Alarm": "fire_alarm",
-            "Room_Occupancy_Count": "occupancy",
+            "Temperature (?C)": "temperature",
+            "Humidity (%)": "humidity",
+            "CO2 (ppm)": "co2",
+            "PM2.5 (?g/m?)": "pm25",
+            "PM10 (?g/m?)": "pm10",
+            "TVOC (ppb)": "tvoc",
+            "CO (ppm)": "co",
+            "Light Intensity (lux)": "light",
+            "Motion Detected": "motion",
+            "Occupancy Count": "occupancy",
+            "Ventilation Status": "ventilation",
         }
 
+        # Renommage des colonnes
         df = df.rename(columns=column_mapping)
+
+        # Création de la colonne cible binaire
         df["target"] = df["occupancy"].apply(lambda x: 0 if x > 0 else 1)
 
+        # Échantillonnage pour Evidently
         n_sample = min(SAMPLE_SIZE, len(df))
         reference_df = df.sample(n=n_sample, random_state=42)
 
+        # Sauvegarde du CSV de référence
         reference_data_path.parent.mkdir(parents=True, exist_ok=True)
         reference_df.to_csv(reference_data_path, index=False)
         logger.success(f"Fichier de référence créé : '{reference_data_path}' ({n_sample} lignes)")

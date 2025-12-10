@@ -12,34 +12,20 @@ class AppConfig(BaseSettings):
     BASE_DIR: Path = Field(default_factory=lambda: Path(__file__).resolve().parents[1])
 
     # --- Dossiers / fichiers du modèle ---
-    MODEL_DIR: Path = None
-    MODEL_PATH: Path = None
-    MODEL_VERSION_PATH: Path = None
-    REFERENCE_DATA_PATH: Path = None
+    MODEL_DIR: Path = Field(default_factory=lambda: Path(__file__).resolve().parents[1] / "app" / "data")
+    MODEL_PATH: Path = Field(default_factory=lambda: Path(__file__).resolve().parents[1] / "app" / "data" / "indoor_aqi_model.pkl")
+    MODEL_VERSION_PATH: Path = Field(default_factory=lambda: Path(__file__).resolve().parents[1] / "app" / "data" / "version.txt")
+    REFERENCE_DATA_PATH: Path = Field(default_factory=lambda: Path(__file__).resolve().parents[1] / "app" / "data" / "reference_data.csv")
 
     # --- Logs, monitoring et rapports ---
-    REPORTS_DIR: Path = None
-    PREDICTION_LOG_PATH: Path = None
-    GROUND_TRUTH_LOG_PATH: Path = None
-    METRICS_CACHE_PATH: Path = None
+    REPORTS_DIR: Path = Field(default_factory=lambda: Path(__file__).resolve().parents[1] / "reports")
+    PREDICTION_LOG_PATH: Path = Field(default_factory=lambda: Path(__file__).resolve().parents[1] / "reports" / "prediction_data.csv")
+    GROUND_TRUTH_LOG_PATH: Path = Field(default_factory=lambda: Path(__file__).resolve().parents[1] / "reports" / "ground_truth.csv")
+    METRICS_CACHE_PATH: Path = Field(default_factory=lambda: Path(__file__).resolve().parents[1] / "reports" / "metrics_cache.json")
 
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
-
-    def __init__(self, **values):
-        super().__init__(**values)
-
-        # Construction dynamique des chemins
-        self.MODEL_DIR = self.BASE_DIR / "app" / "data"
-        self.MODEL_PATH = self.MODEL_DIR / "indoor_aqi_model.pkl"
-        self.MODEL_VERSION_PATH = self.MODEL_DIR / "version.txt"
-        self.REFERENCE_DATA_PATH = self.MODEL_DIR / "reference_data.csv"
-
-        self.REPORTS_DIR = self.BASE_DIR / "reports"
-        self.PREDICTION_LOG_PATH = self.REPORTS_DIR / "prediction_data.csv"
-        self.GROUND_TRUTH_LOG_PATH = self.REPORTS_DIR / "ground_truth.csv"
-        self.METRICS_CACHE_PATH = self.REPORTS_DIR / "metrics_cache.json"
 
 
 # Instance cachée pour éviter de recréer AppConfig à chaque accès

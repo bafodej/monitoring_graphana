@@ -2,11 +2,13 @@ import time
 from typing import List, Dict
 import requests
 from loguru import logger
+from pathlib import Path
+import pandas as pd
 from app.config import get_settings
 
 # --- Configuration ---
 settings = get_settings()
-API_BASE_URL: str = settings.API_BASE_URL if hasattr(settings, "API_BASE_URL") else "http://api:8000"
+API_BASE_URL: str = getattr(settings, "API_BASE_URL", "http://api:8000")
 PREDICT_ENDPOINT: str = f"{API_BASE_URL}/predict"
 FEEDBACK_ENDPOINT: str = f"{API_BASE_URL}/feedback"
 
@@ -20,11 +22,17 @@ SAMPLE_TESTS: List[Dict] = [
 
 GROUND_TRUTH: List[int] = [0, 0, 1, 0]  # 0 = activer ventilation, 1 = désactiver
 
+# --- Fichier CSV pour Evidently ---
+REPORTS_DIR: Path = getattr(settings, "REPORTS_DIR", Path("/home/appuser/code/reports"))
+REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+PREDICTION_CSV = REPORTS_DIR / "prediction_data.csv"
+
 
 def run_simulation() -> None:
-    """Exécute la simulation complète : prédictions + feedback + test URL 404."""
+    """Exécute la simulation complète : prédictions + feedback + CSV pour Evidently."""
     logger.info("=== DÉBUT DE LA SIMULATION ===")
     prediction_ids: List[str] = []
+    prediction_records: List[Dict] = []
 
     # --- Étape 1 : Prédictions ---
     for i, sample in enumerate(SAMPLE_TESTS, start=1):
@@ -32,12 +40,25 @@ def run_simulation() -> None:
             logger.info(f"Envoi prédiction #{i}")
             response = requests.post(PREDICT_ENDPOINT, json=sample, timeout=5)
             response.raise_for_status()
-            pid = response.json().get("prediction_id")
+            result = response.json()
+            pid = result.get("prediction_id")
+            predicted_class = result.get("predicted_class", "unknown")
+            confidence = result.get("confidence", 0.0)
+
             if pid:
                 prediction_ids.append(pid)
                 logger.success(f"Prédiction #{i} réussie | ID={pid}")
             else:
                 logger.warning(f"Prédiction #{i} OK mais pas d'ID retourné")
+
+            # --- Stockage pour le CSV ---
+            prediction_records.append({
+                "prediction_id": pid or f"sim_{i}",
+                "predicted_class": predicted_class,
+                "confidence": confidence,
+                **sample
+            })
+
         except requests.RequestException as e:
             logger.error(f"Erreur prédiction #{i} : {e}")
         time.sleep(1)
@@ -58,7 +79,15 @@ def run_simulation() -> None:
             logger.error(f"Erreur feedback #{i+1} : {e}")
         time.sleep(1)
 
-    # --- Étape 3 : Test URL inexistante ---
+    # --- Étape 3 : CSV pour Evidently ---
+    try:
+        df = pd.DataFrame(prediction_records)
+        df.to_csv(PREDICTION_CSV, index=False)
+        logger.success(f"Fichier CSV pour Evidently créé : {PREDICTION_CSV}")
+    except Exception as e:
+        logger.error(f"Erreur lors de la création du CSV : {e}")
+
+    # --- Étape 4 : Test URL inexistante ---
     try:
         response = requests.get(f"{API_BASE_URL}/ceci-est-une-fausse-url", timeout=5)
         if response.status_code == 404:
