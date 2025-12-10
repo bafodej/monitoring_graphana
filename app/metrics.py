@@ -5,6 +5,10 @@ Définit les métriques Prometheus pour le monitoring de l'API, du modèle ML et
 from prometheus_client import Gauge, Counter, Histogram, Summary
 from typing import Dict
 from loguru import logger
+import pandas as pd
+from evidently.legacy.report import Report
+from evidently.legacy.metrics import DataDriftTable
+from pathlib import Path
 
 # ============================================================
 # 🔥 1) MÉTRIQUES DE PERFORMANCE DE L'API (HTTP)
@@ -151,3 +155,33 @@ def record_sensor_data(data: dict[str, float]) -> None:
     except Exception as e:
         logger.error(f"Erreur lors de l'enregistrement des données capteurs : {e}")
         record_api_error("sensor_data_recording")
+
+def record_drift_metrics(reference_path: Path, current_path: Path) -> None:
+    """
+    Calcule le drift des données et met à jour les métriques Prometheus.
+    """
+    try:
+        if not reference_path.exists() or not current_path.exists():
+            logger.warning("Fichiers de référence ou de production manquants pour le drift")
+            return
+
+        ref_df = pd.read_csv(reference_path)
+        curr_df = pd.read_csv(current_path)
+        feature_cols = ['temperature', 'humidity', 'co2', 'pm25', 'pm10', 'tvoc', 'occupancy']
+
+        report = Report(metrics=[DataDriftTable()])
+        report.run(reference_data=ref_df[feature_cols], current_data=curr_df[feature_cols])
+        result = report.as_dict()
+
+        drift_score = result['metrics'][0]['result']['dataset_drift_score']
+        ml_data_drift_score.set(drift_score)
+
+        for feature, feature_info in result['metrics'][0]['result']['drift_by_columns'].items():
+            if feature_info['drift_detected']:
+                ml_feature_drift_detected.labels(feature_name=feature).inc()
+
+        logger.info(f"Drift calculé | score={drift_score:.3f}")
+
+    except Exception as e:
+        logger.error(f"Erreur lors du calcul du drift : {e}")
+        record_api_error("drift_metrics_recording")
