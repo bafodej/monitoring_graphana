@@ -5,7 +5,7 @@ from loguru import logger
 
 from ..schemas.prediction_schemas import AirQualityInput, PredictionOutput
 from ..services.prediction_services import prediction_service
-from ..services.logging_service import logging_service
+from ..services.logging_service import prediction_logger
 from ..metrics import (
     record_prediction_metrics,
     record_sensor_data,
@@ -24,10 +24,9 @@ router = APIRouter(
 async def make_prediction(input_data: AirQualityInput):
     """
     Reçoit les données des capteurs, exécute une prédiction et retourne
-    si la ventilation doit être activée ou non, ainsi que la confiance associée.
-
-    Chaque prédiction est tracée via un ID unique et stockée dans predictions_log.csv
-    pour les rapports Evidently.
+    si la ventilation doit être activée ou non.
+    Toutes les prédictions sont journalisées dans predictions_log.csv
+    pour Evidently (drift + monitoring).
     """
 
     if not prediction_service.is_loaded():
@@ -68,12 +67,13 @@ async def make_prediction(input_data: AirQualityInput):
         if binary_pred == 0:
             ventilation_activations_total.inc()
 
-        # --- LOGGING CSV (ESSENTIEL POUR EVIDENTLY !) ---
-        logging_service.log_prediction(
-            prediction_id=prediction_id,
-            features=features,
-            prediction=binary_pred,
-            confidence=float(probability)
+        # --- LOGGING CSV POUR EVIDENTLY ---
+        prediction_logger.log_prediction(
+            input_data=features,
+            prediction_result={
+                "prediction": binary_pred,
+                "action": prediction_class
+            }
         )
 
         # --- Console log ---

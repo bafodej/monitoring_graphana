@@ -6,27 +6,24 @@ import argparse
 
 from app.config import get_settings
 
-SAMPLE_SIZE = 500
-
-
 def create_reference_data(force: bool = False) -> None:
     """
     Crée le fichier de données de référence pour Evidently.
-    Si le fichier existe et `force=False`, la fonction ne fait rien.
+    - Lecture du dataset original
+    - Renommage des colonnes
+    - Sélection uniquement des colonnes utiles
+    - Création d'une colonne target : 0 si occupancy > 0 sinon 1
+    - Échantillonnage propre
     """
     settings = get_settings()
     full_dataset_path: Path = settings.MODEL_DIR / "IoT_Indoor_Air_Quality_Dataset.csv"
     reference_data_path: Path = settings.REFERENCE_DATA_PATH
 
-    logger.info("=== Création du jeu de données de référence pour Evidently ===")
+    logger.info("=== Création du jeu de données de référence Evidently ===")
 
-    # S'assurer que le dossier existe
-    settings.MODEL_DIR.mkdir(parents=True, exist_ok=True)
-
+    # Vérification existence
     if reference_data_path.exists() and not force:
-        logger.warning(
-            f"Le fichier '{reference_data_path}' existe déjà. Utilisez --force pour le recréer."
-        )
+        logger.warning(f"Le fichier '{reference_data_path}' existe déjà. Utilisez --force pour le recréer.")
         return
 
     if not full_dataset_path.exists():
@@ -35,40 +32,48 @@ def create_reference_data(force: bool = False) -> None:
 
     try:
         df = pd.read_csv(full_dataset_path)
-        logger.info("Renommage des colonnes pour correspondre au modèle...")
+    except Exception as e:
+        logger.error(f"Impossible de charger le dataset original : {e}")
+        sys.exit(1)
 
-        # Mapping corrigé selon ton CSV
-        column_mapping = {
-            "Temperature (?C)": "temperature",
-            "Humidity (%)": "humidity",
-            "CO2 (ppm)": "co2",
-            "PM2.5 (?g/m?)": "pm25",
-            "PM10 (?g/m?)": "pm10",
-            "TVOC (ppb)": "tvoc",
-            "CO (ppm)": "co",
-            "Light Intensity (lux)": "light",
-            "Motion Detected": "motion",
-            "Occupancy Count": "occupancy",
-            "Ventilation Status": "ventilation",
-        }
+    logger.info("Dataset chargé. Nettoyage et mapping des colonnes...")
 
-        # Renommage des colonnes
-        df = df.rename(columns=column_mapping)
+    # Mapping CSV original → features utilisées par le modèle
+    column_mapping = {
+        "Temperature (?C)": "temperature",
+        "Humidity (%)": "humidity",
+        "CO2 (ppm)": "co2",
+        "PM2.5 (?g/m?)": "pm25",
+        "PM10 (?g/m?)": "pm10",
+        "TVOC (ppb)": "tvoc",
+        "Occupancy Count": "occupancy",
+    }
 
-        # Création de la colonne cible binaire
-        df["target"] = df["occupancy"].apply(lambda x: 0 if x > 0 else 1)
+    df = df.rename(columns=column_mapping)
 
-        # Échantillonnage pour Evidently
-        n_sample = min(SAMPLE_SIZE, len(df))
-        reference_df = df.sample(n=n_sample, random_state=42)
+    # Vérifier que toutes les colonnes nécessaires sont présentes
+    missing_columns = [col for col in settings.FEATURE_COLUMNS if col not in df.columns]
+    if missing_columns:
+        logger.error(f"Colonnes manquantes dans le dataset original : {missing_columns}")
+        sys.exit(1)
 
-        # Sauvegarde du CSV de référence
+    # Filtrer uniquement les colonnes utiles
+    df = df[settings.FEATURE_COLUMNS]
+
+    # Création de la colonne 'target'
+    df["target"] = df["occupancy"].apply(lambda x: 0 if x > 0 else 1)
+
+    # Échantillonnage propre
+    n_sample = min(settings.SAMPLE_SIZE, len(df))
+    reference_df = df.sample(n=n_sample, random_state=42)
+
+    # Sauvegarde du fichier final
+    try:
         reference_data_path.parent.mkdir(parents=True, exist_ok=True)
         reference_df.to_csv(reference_data_path, index=False)
         logger.success(f"Fichier de référence créé : '{reference_data_path}' ({n_sample} lignes)")
-
     except Exception as e:
-        logger.error(f"Erreur lors de la création du fichier de référence : {e}")
+        logger.error(f"Erreur lors de l'écriture du fichier de référence : {e}")
         sys.exit(1)
 
 

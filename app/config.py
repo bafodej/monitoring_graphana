@@ -23,6 +23,12 @@ class AppConfig(BaseSettings):
     GROUND_TRUTH_LOG_PATH: Path = Field(default_factory=lambda: Path(__file__).resolve().parents[1] / "reports" / "ground_truth.csv")
     METRICS_CACHE_PATH: Path = Field(default_factory=lambda: Path(__file__).resolve().parents[1] / "reports" / "metrics_cache.json")
 
+    # --- Constants modèle / Evidently ---
+    FEATURE_COLUMNS: list[str] = Field(default_factory=lambda: [
+        "temperature", "humidity", "co2", "pm25", "pm10", "tvoc", "occupancy"
+    ])
+    SAMPLE_SIZE: int = 500
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

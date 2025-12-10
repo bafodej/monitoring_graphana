@@ -13,19 +13,23 @@ from evidently.legacy.metrics import DataDriftTable
 def main() -> None:
     """
     Exécute le monitoring Evidently (Data Drift) :
-    - Vérifie la présence des fichiers de référence et de prédictions
+    - Vérifie la présence des fichiers de référence et des prédictions
     - Génère le rapport HTML de drift
     - Met à jour les métriques Prometheus
     """
+
     settings = get_settings()
     reference_path: Path = settings.REFERENCE_DATA_PATH
     prediction_log_path: Path = settings.PREDICTION_LOG_PATH
     reports_dir: Path = settings.REPORTS_DIR
+    feature_cols = settings.FEATURE_COLUMNS
+
+    # Créer le dossier des rapports si nécessaire
     reports_dir.mkdir(parents=True, exist_ok=True)
 
     logger.info(">>> Lancement du monitoring Evidently (Data Drift)...")
 
-    # Vérification des fichiers
+    # --- Vérification des fichiers ---
     if not reference_path.exists():
         logger.error(f"Fichier de référence introuvable : {reference_path}")
         return
@@ -34,19 +38,21 @@ def main() -> None:
         return
 
     try:
-        # Charger les données
+        # --- Charger les données ---
         reference_df = pd.read_csv(reference_path)
         current_df = prediction_logger.get_all_predictions()
+
         if current_df.empty:
             logger.warning("Aucune prédiction enregistrée → rien à analyser.")
             return
 
-        # Définir les colonnes features
-        feature_cols = ['temperature', 'humidity', 'co2', 'pm25', 'pm10', 'tvoc', 'occupancy']
-        for col in feature_cols:
-            if col not in reference_df.columns or col not in current_df.columns:
-                logger.error(f"Colonne manquante pour le drift : {col}")
-                return
+        # --- Vérifier que toutes les colonnes nécessaires existent ---
+        missing_cols_ref = [col for col in feature_cols if col not in reference_df.columns]
+        missing_cols_curr = [col for col in feature_cols if col not in current_df.columns]
+        if missing_cols_ref or missing_cols_curr:
+            logger.error(f"Colonnes manquantes dans le dataset : "
+                         f"Référence={missing_cols_ref}, Prédictions={missing_cols_curr}")
+            return
 
         # --- Créer et exécuter le rapport Data Drift ---
         report = Report(metrics=[DataDriftTable()])
@@ -65,6 +71,7 @@ def main() -> None:
         drift_result = report.as_dict()['metrics'][0]['result']
         drift_score = drift_result.get('dataset_drift_score', 0.0)
         drifted_features = [f for f, v in drift_result['drift_by_columns'].items() if v['drift_detected']]
+
         logger.info(f"Score de drift global : {drift_score:.3f}")
         logger.info(f"Features driftées : {drifted_features if drifted_features else 'Aucune'}")
 

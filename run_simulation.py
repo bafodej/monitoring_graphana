@@ -2,12 +2,12 @@ import time
 from typing import List, Dict
 import requests
 from loguru import logger
-from pathlib import Path
 import pandas as pd
 from app.config import get_settings
 
-# --- Configuration ---
 settings = get_settings()
+
+# --- Endpoints API ---
 API_BASE_URL: str = getattr(settings, "API_BASE_URL", "http://api:8000")
 PREDICT_ENDPOINT: str = f"{API_BASE_URL}/predict"
 FEEDBACK_ENDPOINT: str = f"{API_BASE_URL}/feedback"
@@ -23,10 +23,9 @@ SAMPLE_TESTS: List[Dict] = [
 GROUND_TRUTH: List[int] = [0, 0, 1, 0]  # 0 = activer ventilation, 1 = désactiver
 
 # --- Fichier CSV pour Evidently ---
-REPORTS_DIR: Path = getattr(settings, "REPORTS_DIR", Path("/home/appuser/code/reports"))
+REPORTS_DIR = settings.REPORTS_DIR
 REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-PREDICTION_CSV = REPORTS_DIR / "prediction_data.csv"
-
+PREDICTION_CSV = settings.PREDICTION_LOG_PATH
 
 def run_simulation() -> None:
     """Exécute la simulation complète : prédictions + feedback + CSV pour Evidently."""
@@ -51,7 +50,6 @@ def run_simulation() -> None:
             else:
                 logger.warning(f"Prédiction #{i} OK mais pas d'ID retourné")
 
-            # --- Stockage pour le CSV ---
             prediction_records.append({
                 "prediction_id": pid or f"sim_{i}",
                 "predicted_class": predicted_class,
