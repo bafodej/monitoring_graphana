@@ -1,0 +1,5 @@
+prediction_id,predicted_class,confidence,temperature,humidity,co2,pm25,pm10,tvoc,occupancy
+b364c23a-5b2d-44c6-9b65-975c71a5b44f,activate_ventilation,0.969607193635646,28.0,70.0,1800,80.0,120.0,400,50
+c822a1d5-1fe9-4b00-b31a-a63373b4fa8f,activate_ventilation,0.9487631347664819,30.0,50.0,500,10.0,15.0,50,5
+0d89beaa-48b3-4e41-9343-aa70676e66be,deactivate_ventilation,0.9947063019563974,22.0,45.0,400,8.0,12.0,30,0
+9d62e58f-8376-446a-976f-a2f0be2b7c67,activate_ventilation,0.5182625161228924,24.0,55.0,1200,40.0,60.0,250,30
